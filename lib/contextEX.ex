@@ -65,11 +65,11 @@ defmodule ContextEX do
     module = __CALLER__.module
     body = genBody(bodyExp, module)
     ast = {:defp, [context: module, import: Kernel],
-            [genFuncAST(func, layerMap, module),
+            [genPartialFuncAST(func, layerMap, module),
              [do: body]]}
 
     quote bind_quoted: [name: name, arity: arity, layer: layerMap, ast: ast] do
-      # 未登録のlayeredFunctionなら登録する
+      # register layered func
       if @layeredFunc[name] != arity do
         @layeredFunc {name, arity}
       end
@@ -78,11 +78,11 @@ defmodule ContextEX do
     end
   end
 
-  defp genFuncAST(func, layerMap, module) do
+  defp genPartialFuncAST(func, layerMap, module) do
     {funcName, _, argsExpression} = func
     args = genArgs(argsExpression, module)
     {partialFuncName(funcName), [context: module],
-      # 最初の引数をlayerの値にする
+      # insert arg, which is activated layers
       List.insert_at(args, 0, genArgsLayer(layerMap))}
   end
 
@@ -130,7 +130,7 @@ defmodule ContextEX do
          {:__block__, [],[
           {:=, [], [{:layer, [], module}, {:getActiveLayers, [], module}]},
           {partialFuncName(funcName), [context: module],
-            # 最初の引数として活性化しているlayerを渡す
+            # pass activated layers for first arg
             List.insert_at(args, 0, {:layer, [], module})}
          ]}]]}
   end
