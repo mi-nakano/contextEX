@@ -1,5 +1,6 @@
 defmodule ContextEX do
   @agentName ContextEXAgent
+  @noneGroup :noneGroup
 
   defmacro __using__(options) do
     quote do
@@ -20,27 +21,61 @@ defmodule ContextEX do
     {:__block__, [], defList}
   end
 
-  defmacro initLayer() do
+  defmacro initLayer(arg \\ nil) do
+    group = if arg == nil do
+      @noneGroup
+    else
+      arg
+    end
     quote do
       {:ok, pid} = Agent.start_link(fn -> %{} end)
       Agent.update(unquote(@agentName), fn(state) ->
-        Map.put(state, self, pid)
+        Map.put(state, {unquote(group), self}, pid)
       end)
     end
   end
 
   defmacro getActiveLayers() do
     quote do
-      pid = Agent.get(unquote(@agentName), fn(state) -> state[self] end)
+      {_, pid} = Agent.get(unquote(@agentName), fn(state) ->
+        state |> Enum.find(fn(x) ->
+          {{_, p}, _} = x
+          p == self
+        end)
+      end)
       Agent.get(pid, fn(state) -> state end)
     end
   end
 
   defmacro activateLayer(map) do
     quote do
-      pid = Agent.get(unquote(@agentName), fn(state) -> state[self] end)
+      {_, pid} = Agent.get(unquote(@agentName), fn(state) ->
+        state |> Enum.find(fn(x) ->
+          {{_, p}, _} = x
+          p == self
+        end)
+      end)
       Agent.update(pid, fn(state) ->
         Map.merge(state, unquote(map))
+      end)
+    end
+  end
+
+  defmacro activateLayer(group, map) do
+    quote do
+      pids = Agent.get(unquote(@agentName), fn(state) ->
+        state |> Enum.filter(fn(x) ->
+          {{g, _}, _} = x
+          g == unquote(group)
+        end) |> Enum.map(fn(x) ->
+          {_, pid} = x
+          pid
+        end)
+      end)
+      pids |> Enum.each(fn(pid) ->
+        Agent.update(pid, fn(state) ->
+          Map.merge(state, unquote(map))
+        end)
       end)
     end
   end
