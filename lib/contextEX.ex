@@ -21,7 +21,12 @@ defmodule ContextEX do
     {:__block__, [], defList}
   end
 
-  defmacro initLayer(group \\ @noneGroup) do
+  defmacro initLayer(arg \\ nil) do
+    group = if arg == nil do
+      @noneGroup
+    else
+      arg
+    end
     quote do
       {:ok, pid} = Agent.start_link(fn -> %{} end)
       Agent.update(unquote(@agentName), fn(state) ->

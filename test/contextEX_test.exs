@@ -5,7 +5,7 @@ defmodule ContextEXTest do
   defmodule Caller do
     use ContextEX
 
-    def start(groupName \\ :noneGroup) do
+    def start(groupName \\ nil) do
       spawn(fn ->
         initLayer(groupName)
         routine
