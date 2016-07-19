@@ -1,6 +1,9 @@
+[![hex.pm version](https://img.shields.io/hexpm/v/contextEX.svg)](https://hex.pm/packages/contexEX)
+[![hex.pm](https://img.shields.io/hexpm/l/contextEX.svg)](https://github.com/mi-nakano/contexEX/blob/master/LICENSE)
+
 # ContextEX
 
-**TODO: Add description**
+Library for Context-oriented Programming with Elixir.
 
 ## Installation
 
