@@ -33,7 +33,7 @@ defmodule ContextEXTest do
     deflf func(), %{:categoryA => :layer1, :categoryB => :layer2}, do: 2
     deflf func(), %{:categoryB => :layer3}, do: 3
     deflf func(), %{:categoryA => :layer1}, do: 1
-    deflf func(), %{}, do: 0
+    deflf func(), do: 0
   end
 
 
