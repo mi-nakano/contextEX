@@ -22,40 +22,45 @@ defmodule ContextEX do
   end
 
   defmacro initLayer(arg \\ nil) do
-    group = if arg == nil do
-      @noneGroup
-    else
-      arg
-    end
     quote do
-      {:ok, pid} = Agent.start_link(fn -> %{} end)
+      group = if unquote(arg) == nil do
+        unquote(@noneGroup)
+      else
+        unquote(arg)
+      end
+
+
+      selfPid = self
+      {:ok, layerPid} = Agent.start_link(fn -> %{} end)
       Agent.update(unquote(@agentName), fn(state) ->
-        Map.put(state, {unquote(group), self}, pid)
+        Map.put(state, {group, selfPid}, layerPid)
       end)
     end
   end
 
   defmacro getActiveLayers() do
     quote do
-      {_, pid} = Agent.get(unquote(@agentName), fn(state) ->
+      selfPid = self
+      {_, layerPid} = Agent.get(unquote(@agentName), fn(state) ->
         state |> Enum.find(fn(x) ->
           {{_, p}, _} = x
-          p == self
+          p == selfPid
         end)
       end)
-      Agent.get(pid, fn(state) -> state end)
+      Agent.get(layerPid, fn(state) -> state end)
     end
   end
 
   defmacro activateLayer(map) do
     quote do
-      {_, pid} = Agent.get(unquote(@agentName), fn(state) ->
+      selfPid = self
+      {_, layerPid} = Agent.get(unquote(@agentName), fn(state) ->
         state |> Enum.find(fn(x) ->
           {{_, p}, _} = x
-          p == self
+          p == selfPid
         end)
       end)
-      Agent.update(pid, fn(state) ->
+      Agent.update(layerPid, fn(state) ->
         Map.merge(state, unquote(map))
       end)
     end

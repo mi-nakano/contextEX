@@ -40,79 +40,52 @@ defmodule ContextEXTest do
   test "layer test" do
     p = Caller.start
     send p, {:getLayer, self}
-    receive do
-      result -> assert result = %{}
-    end
+    assert_receive %{}
 
     send p, {:activate, %{:categoryA => :layer1}}
     send p, {:getLayer, self}
-    receive do
-      result -> assert result = %{:categoryA => :layer1}
-    end
+    assert_receive %{:categoryA => :layer1}
 
     send p, {:activate, %{:categoryB => :layer2}}
     send p, {:getLayer, self}
-    receive do
-      result -> assert result = %{:categoryA => :layer1, :categoryB => :layer2}
-    end
+    assert_receive %{:categoryA => :layer1, :categoryB => :layer2}
 
     send p, {:activate, %{:categoryB => :layer3}}
     send p, {:getLayer, self}
-    receive do
-      result -> assert result = %{:categoryA => :layer1, :categoryB => :layer3}
-    end
-
-    send p, {:end, self}
-    receive do
-      :end -> IO.puts "end"
-    end
+    assert_receive %{:categoryA => :layer1, :categoryB => :layer3}
   end
 
   test "spawn test" do
     p1 = Caller.start
     send p1, {:activate, %{:categoryA => :layer1}}
     send p1, {:getLayer, self}
-    receive do
-      result -> assert result = %{:categoryA => :layer1}
-    end
+    assert_receive %{:categoryA => :layer1}
 
     p2 = Caller.start
     send p2, {:activate, %{:categoryA => :layer2}}
     send p2, {:getLayer, self}
-    receive do
-      result -> assert result = %{:categoryA => :layer2}
-    end
+    assert_receive %{:categoryA => :layer2}
 
     send p1, {:getLayer, self}
-    receive do
-      result -> assert result = %{:categoryA => :layer1}
-    end
+    assert_receive %{:categoryA => :layer1}
   end
 
   test "layered function test" do
     p = Caller.start
     send p, {:func, self}
-    receive do
-      result -> assert result == 0
-    end
+    assert_receive 0
 
     send p, {:activate, %{:categoryA => :layer1}}
     send p, {:func, self}
-    receive do
-      result -> assert result == 1
-    end
+    assert_receive 1
 
     send p, {:activate, %{:categoryB => :layer2}}
     send p, {:func, self}
-    receive do
-      result -> assert result == 2
-    end
+    assert_receive 2
 
     send p, {:activate, %{:categoryB => :layer3}}
     send p, {:func, self}
-    receive do
-      result -> assert result == 3
-    end
+    assert_receive 3
   end
 
   test "group activation test" do
@@ -122,16 +95,10 @@ defmodule ContextEXTest do
 
     send p1, {:activateGroup, :groupA, %{:categoryA => :layer1}}
     send p1, {:getLayer, self}
-    receive do
-      result -> assert result = %{:categoryA => :layer1}
-    end
+    assert_receive %{:categoryA => :layer1}
     send p2, {:getLayer, self}
-    receive do
-      result -> assert result = %{:categoryA => :layer1}
-    end
+    assert_receive %{:categoryA => :layer1}
     send p3, {:getLayer, self}
-    receive do
-      result -> assert result = %{}
-    end
+    assert_receive %{}
   end
 end
