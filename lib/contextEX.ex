@@ -1,5 +1,5 @@
 defmodule ContextEX do
-  @agentName ContextEXAgent
+  @topAgent :ContextEXAgent
   @noneGroup :noneGroup
 
   defmacro __using__(options) do
@@ -9,7 +9,6 @@ defmodule ContextEX do
       Module.register_attribute __MODULE__, :layeredFunc, accumulate: true, persist: false
       Module.register_attribute __MODULE__, :requiredLayer, accumulate: true, persist: false
 
-      Agent.start(fn -> %{} end, name: unquote(@agentName))
     end
   end
 
@@ -29,10 +28,15 @@ defmodule ContextEX do
         unquote(arg)
       end
 
+      if !(unquote(@topAgent) in Process.registered) do
+        {:ok, pid} = Agent.start(fn -> %{} end)
+        Process.register pid, unquote(@topAgent)
+      end
 
       selfPid = self
       {:ok, layerPid} = Agent.start_link(fn -> %{} end)
-      Agent.update(unquote(@agentName), fn(state) ->
+      topAgent = Process.whereis unquote(@topAgent)
+      Agent.update(topAgent, fn(state) ->
         Map.put(state, {group, selfPid}, layerPid)
       end)
     end
@@ -41,7 +45,8 @@ defmodule ContextEX do
   defmacro getActiveLayers() do
     quote do
       selfPid = self
-      {_, layerPid} = Agent.get(unquote(@agentName), fn(state) ->
+      topAgent = Process.whereis unquote(@topAgent)
+      {_, layerPid} = Agent.get(topAgent, fn(state) ->
         state |> Enum.find(fn(x) ->
           {{_, p}, _} = x
           p == selfPid
@@ -54,7 +59,8 @@ defmodule ContextEX do
   defmacro activateLayer(map) do
     quote do
       selfPid = self
-      {_, layerPid} = Agent.get(unquote(@agentName), fn(state) ->
+      topAgent = Process.whereis unquote(@topAgent)
+      {_, layerPid} = Agent.get(topAgent, fn(state) ->
         state |> Enum.find(fn(x) ->
           {{_, p}, _} = x
           p == selfPid
@@ -68,7 +74,8 @@ defmodule ContextEX do
 
   defmacro activateLayer(group, map) do
     quote do
-      pids = Agent.get(unquote(@agentName), fn(state) ->
+      topAgent = Process.whereis unquote(@topAgent)
+      pids = Agent.get(topAgent, fn(state) ->
         state |> Enum.filter(fn(x) ->
           {{g, _}, _} = x
           g == unquote(group)
