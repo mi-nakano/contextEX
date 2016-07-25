@@ -160,17 +160,17 @@ defmodule ContextEX do
       {:__block__, meta, list} ->
         trList = list |> Enum.map(&(translate(&1, module)))
         {:__block__, meta, trList}
-      tupple -> translate(tupple, module)
+      tuple -> translate(tuple, module)
     end
   end
 
-  defp translate(tupple, module) do
-    case tupple do
+  defp translate(tuple, module) do
+    case tuple do
       {atom, _, nil} -> {atom, [], module}
       {atom, _, list} when is_list(list) ->
         {atom, [context: module, import: Kernel],
           list |> Enum.map(&(translate(&1, module)))}
-      _ -> tupple
+      _ -> tuple
     end
   end
 
