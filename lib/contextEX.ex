@@ -164,15 +164,30 @@ defmodule ContextEX do
     end
   end
 
-  defp translate(tuple, module) do
+  defp translate(atom, _) when is_atom(atom), do: atom
+  defp translate(tuple, module) when is_tuple(tuple) do
     case tuple do
-      {atom, _, nil} -> {atom, [], module}
-      {atom, _, list} when is_list(list) ->
-        {atom, [context: module, import: Kernel],
-          list |> Enum.map(&(translate(&1, module)))}
-      _ -> tuple
+      # make tupple of size = 2
+      {t1, t2} when is_tuple(t1) and is_tuple(t2) ->
+        {translate(t1, module), translate(t2, module)}
+      # variable
+      {atom, _, nil} when is_atom(atom) -> {atom, [], module}
+      # apply function
+      {atom, _, list} when is_atom(atom) and is_list(list) ->
+        {atom, [context: module, import: Kernel], translate(list, module)}
+      # inner tuple
+      {tp, _, nil} when is_tuple(tp) ->
+        {translate(tp, module), [context: module, import: Kernel], []}
+      {tp, _, list} when is_tuple(tp) and is_list(list) ->
+        {translate(tp, module), [context: module, import: Kernel], translate(list, module)}
+      # other
+      tuple -> tuple
     end
   end
+  defp translate(list, module) when is_list(list) do
+    list |> Enum.map(&(translate(&1, module)))
+  end
+  defp translate(any, _), do: any
 
   defp genGenericFunctionAST({funcName, arity}, module) do
     args = genDummyArgs(arity, module)
