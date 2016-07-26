@@ -7,7 +7,6 @@ defmodule ContextEX do
       import unquote(__MODULE__)
       @before_compile unquote(__MODULE__)
       Module.register_attribute __MODULE__, :layeredFunc, accumulate: true, persist: false
-      Module.register_attribute __MODULE__, :requiredLayer, accumulate: true, persist: false
 
       defp getActiveLayers(), do: getActiveLayers(self)
       defp activateLayer(map), do: activateLayer(self, map)
@@ -127,35 +126,24 @@ defmodule ContextEX do
   defmacro deflf(func, mapExp \\ %{}, do: bodyExp) do
     {name, _, argsExp} = func
     arity = length(argsExp)
-    layerMap =
-      case mapExp do
-        %{} -> []
-        {:%{}, _, []} -> []
-        {:%{}, _, keywordList} -> keywordList
-      end
-    module = __CALLER__.module
-    body = genBody(bodyExp, module)
-    ast = {:defp, [context: module, import: Kernel],
-            [genPartialFuncAST(func, layerMap, module),
-             [do: body]]}
+    body = genBody(bodyExp, __CALLER__.module)
+    pfName = partialFuncName(name)
+    args = genArgs(argsExp, __CALLER__.module)
 
-    quote bind_quoted: [name: name, arity: arity, layer: layerMap, ast: ast] do
+    quote bind_quoted: [name: name, arity: arity, body: Macro.escape(body), map: mapExp, pfName: pfName, args: Macro.escape(args)] do
       # register layered func
       if @layeredFunc[name] != arity do
         @layeredFunc {name, arity}
       end
-      @requiredLayer {name, arity, layer}
-      ast
+
+      # defp partialFunc in Caller module
+      layer = {:%{}, [], Map.to_list(map)}
+      partialFuncAST = {:defp, [context: __MODULE__, import: Kernel],
+        [{pfName, [context: __MODULE__], List.insert_at(args, 0, layer)}, [do: body]]}
+      Module.eval_quoted __MODULE__, partialFuncAST
     end
   end
 
-  defp genPartialFuncAST(func, layerMap, module) do
-    {funcName, _, argsExpression} = func
-    args = genArgs(argsExpression, module)
-    {partialFuncName(funcName), [context: module],
-      # insert arg, which is activated layers
-      List.insert_at(args, 0, genArgsLayer(layerMap))}
-  end
 
   defp partialFuncName(funcName) do
     String.to_atom("_partial_" <> Atom.to_string(funcName))
@@ -168,10 +156,6 @@ defmodule ContextEX do
         {name, _, _} -> {name, [], module}
       end
     end)
-  end
-
-  defp genArgsLayer(layerMap) do
-    {:%{}, [], layerMap}
   end
 
   defp genBody(expression, module) do
