@@ -9,6 +9,9 @@ defmodule ContextEX do
       Module.register_attribute __MODULE__, :layeredFunc, accumulate: true, persist: false
       Module.register_attribute __MODULE__, :requiredLayer, accumulate: true, persist: false
 
+      defp getActiveLayers(), do: getActiveLayers(self)
+      defp activateLayer(map), do: activateLayer(self, map)
+      defp isActive?(layer), do: isActive?(self, layer)
     end
   end
 
@@ -42,9 +45,9 @@ defmodule ContextEX do
     end
   end
 
-  defmacro getActiveLayers() do
+  defmacro getActiveLayers(pid) do
     quote do
-      selfPid = self
+      selfPid = unquote(pid)
       topAgent = Process.whereis unquote(@topAgent)
       {_, layerPid} = Agent.get(topAgent, fn(state) ->
         state |> Enum.find(fn(x) ->
@@ -56,9 +59,9 @@ defmodule ContextEX do
     end
   end
 
-  defmacro activateLayer(map) do
+  defmacro activateLayer(pid, map) do
     quote do
-      selfPid = self
+      selfPid = unquote(pid)
       topAgent = Process.whereis unquote(@topAgent)
       {_, layerPid} = Agent.get(topAgent, fn(state) ->
         state |> Enum.find(fn(x) ->
@@ -72,7 +75,7 @@ defmodule ContextEX do
     end
   end
 
-  defmacro activateLayer(group, map) do
+  defmacro activateGroup(group, map) do
     quote do
       topAgent = Process.whereis unquote(@topAgent)
       pids = Agent.get(topAgent, fn(state) ->
@@ -92,9 +95,9 @@ defmodule ContextEX do
     end
   end
 
-  defmacro isActive?(layer) do
+  defmacro isActive?(pid, layer) do
     quote do
-      map = getActiveLayers
+      map = getActiveLayers unquote(pid)
       unquote(layer) in Map.values(map)
     end
   end
