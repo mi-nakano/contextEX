@@ -101,4 +101,32 @@ defmodule ContextEXTest do
     send p3, {:getLayer, self}
     assert_receive %{}
   end
+
+
+  defmodule MyStruct do
+    defstruct name: "", value: ""
+  end
+
+  defmodule StructTest do
+    use ContextEX
+
+    def start(pid) do
+      spawn(fn ->
+        initLayer
+        receive do
+          struct -> send pid, f(struct)
+        end
+      end)
+    end
+    deflf f(struct) do
+      {struct.name, struct.value}
+    end
+  end
+
+  test "Struct test" do
+    pid = StructTest.start(self)
+    send pid, %MyStruct{name: :n, value: :val}
+    #assert_receive 1
+      assert_receive {:n, :val}
+  end
 end
