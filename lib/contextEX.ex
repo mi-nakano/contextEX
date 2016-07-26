@@ -45,33 +45,49 @@ defmodule ContextEX do
     end
   end
 
+  @doc """
+  return nil when pid isn't registered
+  """
   defmacro getActiveLayers(pid) do
     quote do
       selfPid = unquote(pid)
       topAgent = Process.whereis unquote(@topAgent)
-      {_, layerPid} = Agent.get(topAgent, fn(state) ->
+      res = Agent.get(topAgent, fn(state) ->
         state |> Enum.find(fn(x) ->
           {{_, p}, _} = x
           p == selfPid
         end)
       end)
-      Agent.get(layerPid, fn(state) -> state end)
+      if res == nil do
+        nil
+      else
+        {_, layerPid} = res
+        Agent.get(layerPid, fn(state) -> state end)
+      end
     end
   end
 
+  @doc """
+  return nil when pid isn't registered
+  """
   defmacro activateLayer(pid, map) do
     quote do
       selfPid = unquote(pid)
       topAgent = Process.whereis unquote(@topAgent)
-      {_, layerPid} = Agent.get(topAgent, fn(state) ->
+      res = Agent.get(topAgent, fn(state) ->
         state |> Enum.find(fn(x) ->
           {{_, p}, _} = x
           p == selfPid
         end)
       end)
-      Agent.update(layerPid, fn(state) ->
-        Map.merge(state, unquote(map))
-      end)
+      if res == nil do
+        nil
+      else
+        {_, layerPid} = res
+        Agent.update(layerPid, fn(state) ->
+          Map.merge(state, unquote(map))
+        end)
+      end
     end
   end
 
