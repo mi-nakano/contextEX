@@ -25,40 +25,47 @@ defmodule ContextEXTest do
 
     deflf func(), %{:categoryA => :layer1, :categoryB => :layer2}, do: 2
     deflf func(), %{:categoryB => :layer3}, do: 3
-    deflf func(), @context1, do: 1
+    deflf func(), @context1, do: 1 # enable @
     deflf func(), do: 0
   end
 
 
   test "layer test" do
+    context1 = %{:categoryA => :layer1}
+    context2 = %{:categoryB => :layer2}
+    context3 = %{:categoryB => :layer3}
+
     p = Caller.start
     Process.sleep 100
     assert getActiveLayers(p) == %{}
 
-    activateLayer(p, %{:categoryA => :layer1})
+    activateLayer(p, context1)
     Process.sleep 100
-    assert getActiveLayers(p) == %{:categoryA => :layer1}
+    assert getActiveLayers(p) == context1
 
-    activateLayer(p, %{:categoryB => :layer2})
+    activateLayer(p, context2)
     Process.sleep 100
-    assert getActiveLayers(p) == %{:categoryA => :layer1, :categoryB => :layer2}
+    context4 = Map.merge(context1, context2)
+    assert getActiveLayers(p) == context4
 
-    activateLayer(p, %{:categoryB => :layer3})
+    activateLayer(p, context3)
     Process.sleep 100
-    assert getActiveLayers(p) == %{:categoryA => :layer1, :categoryB => :layer3}
+    assert getActiveLayers(p) == Map.merge(context4, context3)
   end
 
   test "spawn test" do
+    context1 = %{:categoryA => :layer1}
     p1 = Caller.start
     Process.sleep 100
-    activateLayer(p1, %{:categoryA => :layer1})
-    assert getActiveLayers(p1) == %{:categoryA => :layer1}
+    activateLayer(p1, context1)
+    assert getActiveLayers(p1) == context1
 
+    context2 = %{:categoryA => :layer2}
     p2 = Caller.start
     Process.sleep 100
-    activateLayer(p2, %{:categoryA => :layer2})
-    assert getActiveLayers(p2) == %{:categoryA => :layer2}
-    assert getActiveLayers(p1) == %{:categoryA => :layer1}
+    activateLayer(p2, context2)
+    assert getActiveLayers(p2) == context2
+    assert getActiveLayers(p1) == context1
   end
 
   test "layered function test" do
