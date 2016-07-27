@@ -2,7 +2,7 @@ defmodule ContextEX do
   @topAgent :ContextEXAgent
   @noneGroup :noneGroup
 
-  defmacro __using__(options) do
+  defmacro __using__(_options) do
     quote do
       import unquote(__MODULE__)
       @before_compile unquote(__MODULE__)
