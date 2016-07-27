@@ -32,7 +32,12 @@ defmodule ContextEX do
 
       if !(unquote(@topAgent) in Process.registered) do
         {:ok, pid} = Agent.start(fn -> %{} end)
-        Process.register pid, unquote(@topAgent)
+        try do
+          Process.register pid, unquote(@topAgent)
+        rescue
+          ArgumentError ->
+            IO.puts "(Warn) ArgumentError! at initializing TopAgent"
+        end
       end
 
       selfPid = self
