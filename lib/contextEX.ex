@@ -22,7 +22,7 @@ defmodule ContextEX do
     {:__block__, [], defList}
   end
 
-  defmacro initLayer(arg \\ nil) do
+  defmacro initContext(arg \\ nil) do
     quote do
       group = if unquote(arg) == nil do
         unquote(@noneGroup)

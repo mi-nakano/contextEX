@@ -9,7 +9,7 @@ defmodule ContextEXTest do
 
     def start(groupName \\ nil) do
       spawn(fn ->
-        initLayer(groupName)
+        initContext(groupName)
         routine
       end)
     end
@@ -109,7 +109,7 @@ defmodule ContextEXTest do
 
     def start(pid) do
       spawn(fn ->
-        initLayer
+        initContext
         receive do
           struct -> send pid, f(struct)
         end
