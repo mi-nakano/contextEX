@@ -155,13 +155,12 @@ defmodule ContextEX do
   end
 
   defp genArgs(args, module) do
-    Enum.map(args, fn(arg) ->
-      case arg do
-        atom when is_atom(atom) -> atom
-        {name, _, _} -> {name, [], module}
-      end
-    end)
+    Enum.map(args, fn(arg) -> genArg(arg, module) end)
   end
+  defp genArg(atom, _) when is_atom(atom), do: atom
+  defp genArg(num, _) when is_number(num), do: num
+  defp genArg({name, _, _}, module), do: {name, [], module}
+  defp genArg(tuple, module) when is_tuple(tuple), do: tuple
 
   defp genBody(expression, module) do
     case expression do

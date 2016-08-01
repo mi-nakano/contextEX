@@ -104,26 +104,40 @@ defmodule ContextEXTest do
     defstruct name: "", value: ""
   end
 
-  defmodule StructTest do
+  defmodule MatchTest do
     use ContextEX
 
     def start(pid) do
       spawn(fn ->
         initContext
-        receive do
-          struct -> send pid, f(struct)
-        end
+        receiveRet(pid)
       end)
     end
-    deflf f(struct) do
-      {struct.name, struct.value}
+    def receiveRet(pid) do
+      receive do
+        arg -> send pid, f(arg)
+      end
+      receiveRet pid
     end
+
+    deflf f(1), do: 1
+    deflf f(:atom), do: :atom
+    deflf f({1, 2}), do: 0
+    deflf f(struct), do: {struct.name, struct.value}
   end
 
-  test "Struct test" do
-    pid = StructTest.start(self)
+  test "Match" do
+    pid = MatchTest.start(self)
+    send pid, 1
+    assert_receive 1
+
+    send pid, :atom
+    assert_receive :atom
+
+    send pid, {1, 2}
+    assert_receive 0
+
     send pid, %MyStruct{name: :n, value: :val}
-    #assert_receive 1
-      assert_receive {:n, :val}
+    assert_receive {:n, :val}
   end
 end
