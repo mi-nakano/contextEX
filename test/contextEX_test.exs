@@ -9,7 +9,7 @@ defmodule ContextEXTest do
 
     def start(groupName \\ nil) do
       spawn(fn ->
-        initContext(groupName)
+        init_context(groupName)
         routine
       end)
     end
@@ -37,35 +37,35 @@ defmodule ContextEXTest do
 
     p = Caller.start
     Process.sleep 100
-    assert getActiveLayers(p) == %{}
+    assert get_activelayers(p) == %{}
 
-    activateLayer(p, context1)
+    activate_layer(p, context1)
     Process.sleep 100
-    assert getActiveLayers(p) == context1
+    assert get_activelayers(p) == context1
 
-    activateLayer(p, context2)
+    activate_layer(p, context2)
     Process.sleep 100
     context4 = Map.merge(context1, context2)
-    assert getActiveLayers(p) == context4
+    assert get_activelayers(p) == context4
 
-    activateLayer(p, context3)
+    activate_layer(p, context3)
     Process.sleep 100
-    assert getActiveLayers(p) == Map.merge(context4, context3)
+    assert get_activelayers(p) == Map.merge(context4, context3)
   end
 
   test "spawn test" do
     context1 = %{:categoryA => :layer1}
     p1 = Caller.start
     Process.sleep 100
-    activateLayer(p1, context1)
-    assert getActiveLayers(p1) == context1
+    activate_layer(p1, context1)
+    assert get_activelayers(p1) == context1
 
     context2 = %{:categoryA => :layer2}
     p2 = Caller.start
     Process.sleep 100
-    activateLayer(p2, context2)
-    assert getActiveLayers(p2) == context2
-    assert getActiveLayers(p1) == context1
+    activate_layer(p2, context2)
+    assert get_activelayers(p2) == context2
+    assert get_activelayers(p1) == context1
   end
 
   test "layered function test" do
@@ -73,15 +73,15 @@ defmodule ContextEXTest do
     send p, {:func, self}
     assert_receive 0
 
-    activateLayer(p, %{:categoryA => :layer1})
+    activate_layer(p, %{:categoryA => :layer1})
     send p, {:func, self}
     assert_receive 1
 
-    activateLayer(p, %{:categoryB => :layer2})
+    activate_layer(p, %{:categoryB => :layer2})
     send p, {:func, self}
     assert_receive 2
 
-    activateLayer(p, %{:categoryB => :layer3})
+    activate_layer(p, %{:categoryB => :layer3})
     send p, {:func, self}
     assert_receive 3
   end
@@ -92,11 +92,11 @@ defmodule ContextEXTest do
     p3 = Caller.start(:groupB)
     Process.sleep 100
 
-    activateGroup(:groupA, %{:categoryA => :layer1})
+    activate_group(:groupA, %{:categoryA => :layer1})
     Process.sleep 100
-    assert getActiveLayers(p1) == %{:categoryA => :layer1}
-    assert getActiveLayers(p2) == %{:categoryA => :layer1}
-    assert getActiveLayers(p3) == %{}
+    assert get_activelayers(p1) == %{:categoryA => :layer1}
+    assert get_activelayers(p2) == %{:categoryA => :layer1}
+    assert get_activelayers(p3) == %{}
   end
 
 
@@ -109,7 +109,7 @@ defmodule ContextEXTest do
 
     def start(pid) do
       spawn(fn ->
-        initContext
+        init_context
         receiveRet(pid)
       end)
     end

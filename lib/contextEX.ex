@@ -8,9 +8,9 @@ defmodule ContextEX do
       @before_compile unquote(__MODULE__)
       Module.register_attribute __MODULE__, :layeredFunc, accumulate: true, persist: false
 
-      defp getActiveLayers(), do: getActiveLayers(self)
-      defp activateLayer(map), do: activateLayer(self, map)
-      defp isActive?(layer), do: isActive?(self, layer)
+      defp get_activelayers(), do: get_activelayers(self)
+      defp activate_layer(map), do: activate_layer(self, map)
+      defp is_active?(layer), do: is_active?(self, layer)
     end
   end
 
@@ -22,7 +22,7 @@ defmodule ContextEX do
     {:__block__, [], defList}
   end
 
-  defmacro initContext(arg \\ nil) do
+  defmacro init_context(arg \\ nil) do
     quote do
       group = if unquote(arg) == nil do
         unquote(@noneGroup)
@@ -52,7 +52,7 @@ defmodule ContextEX do
   @doc """
   return nil when pid isn't registered
   """
-  defmacro getActiveLayers(pid) do
+  defmacro get_activelayers(pid) do
     quote do
       selfPid = unquote(pid)
       topAgent = Process.whereis unquote(@topAgent)
@@ -74,7 +74,7 @@ defmodule ContextEX do
   @doc """
   return nil when pid isn't registered
   """
-  defmacro activateLayer(pid, map) do
+  defmacro activate_layer(pid, map) do
     quote do
       selfPid = unquote(pid)
       topAgent = Process.whereis unquote(@topAgent)
@@ -95,7 +95,7 @@ defmodule ContextEX do
     end
   end
 
-  defmacro activateGroup(group, map) do
+  defmacro activate_group(group, map) do
     quote do
       topAgent = Process.whereis unquote(@topAgent)
       pids = Agent.get(topAgent, fn(state) ->
@@ -115,9 +115,9 @@ defmodule ContextEX do
     end
   end
 
-  defmacro isActive?(pid, layer) do
+  defmacro is_active?(pid, layer) do
     quote do
-      map = getActiveLayers unquote(pid)
+      map = get_activelayers unquote(pid)
       unquote(layer) in Map.values(map)
     end
   end
@@ -202,7 +202,7 @@ defmodule ContextEX do
       [{funcName, [context: module], args},
        [do:
          {:__block__, [],[
-          {:=, [], [{:layer, [], module}, {:getActiveLayers, [], module}]},
+          {:=, [], [{:layer, [], module}, {:get_activelayers, [], module}]},
           {partialfunc_name(funcName), [context: module],
             # pass activated layers for first arg
             List.insert_at(args, 0, {:layer, [], module})}
