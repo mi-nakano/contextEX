@@ -8,21 +8,21 @@ defmodule ContextEX do
       @before_compile unquote(__MODULE__)
       Module.register_attribute __MODULE__, :layeredFunc, accumulate: true, persist: false
 
-      defp getActiveLayers(), do: getActiveLayers(self)
-      defp activateLayer(map), do: activateLayer(self, map)
-      defp isActive?(layer), do: isActive?(self, layer)
+      defp get_activelayers(), do: get_activelayers(self)
+      defp activate_layer(map), do: activate_layer(self, map)
+      defp is_active?(layer), do: is_active?(self, layer)
     end
   end
 
   defmacro __before_compile__(env) do
     attrs = Module.get_attribute(env.module, :layeredFunc)
-    defList = attrs |> Enum.map(&(genGenericFunctionAST(&1, env.module)))
+    defList = attrs |> Enum.map(&(gen_genericfunction_ast(&1, env.module)))
 
     # return AST
     {:__block__, [], defList}
   end
 
-  defmacro initContext(arg \\ nil) do
+  defmacro init_context(arg \\ nil) do
     quote do
       group = if unquote(arg) == nil do
         unquote(@noneGroup)
@@ -52,7 +52,7 @@ defmodule ContextEX do
   @doc """
   return nil when pid isn't registered
   """
-  defmacro getActiveLayers(pid) do
+  defmacro get_activelayers(pid) do
     quote do
       selfPid = unquote(pid)
       topAgent = Process.whereis unquote(@topAgent)
@@ -74,7 +74,7 @@ defmodule ContextEX do
   @doc """
   return nil when pid isn't registered
   """
-  defmacro activateLayer(pid, map) do
+  defmacro activate_layer(pid, map) do
     quote do
       selfPid = unquote(pid)
       topAgent = Process.whereis unquote(@topAgent)
@@ -95,7 +95,7 @@ defmodule ContextEX do
     end
   end
 
-  defmacro activateGroup(group, map) do
+  defmacro activate_group(group, map) do
     quote do
       topAgent = Process.whereis unquote(@topAgent)
       pids = Agent.get(topAgent, fn(state) ->
@@ -115,25 +115,23 @@ defmodule ContextEX do
     end
   end
 
-  defmacro isActive?(pid, layer) do
+  defmacro is_active?(pid, layer) do
     quote do
-      map = getActiveLayers unquote(pid)
+      map = get_activelayers unquote(pid)
       unquote(layer) in Map.values(map)
     end
   end
 
   defmacro deflf(func, do: bodyExp) do
-    quote do
-      deflf(unquote(func), %{}, do: unquote(bodyExp))
-    end
+    quote do: deflf(unquote(func), %{}, do: unquote(bodyExp))
   end
 
   defmacro deflf(func, mapExp \\ %{}, do: bodyExp) do
     {name, _, argsExp} = func
     arity = length(argsExp)
-    body = genBody(bodyExp, __CALLER__.module)
-    pfName = partialFuncName(name)
-    args = genArgs(argsExp, __CALLER__.module)
+    body = gen_body(bodyExp, __CALLER__.module)
+    pfName = partialfunc_name(name)
+    args = gen_args(argsExp, __CALLER__.module)
 
     quote bind_quoted: [name: name, arity: arity, body: Macro.escape(body), map: mapExp, pfName: pfName, args: Macro.escape(args)] do
       # register layered func
@@ -150,26 +148,23 @@ defmodule ContextEX do
   end
 
 
-  defp partialFuncName(funcName) do
+  defp partialfunc_name(funcName) do
     String.to_atom("_partial_" <> Atom.to_string(funcName))
   end
 
-  defp genArgs(args, module) do
-    Enum.map(args, fn(arg) -> genArg(arg, module) end)
+  defp gen_args(args, module) do
+    Enum.map(args, fn(arg) -> _gen_arg(arg, module) end)
   end
-  defp genArg(atom, _) when is_atom(atom), do: atom
-  defp genArg(num, _) when is_number(num), do: num
-  defp genArg({name, _, _}, module), do: {name, [], module}
-  defp genArg(tuple, module) when is_tuple(tuple), do: tuple
+  defp _gen_arg(atom, _) when is_atom(atom), do: atom
+  defp _gen_arg(num, _) when is_number(num), do: num
+  defp _gen_arg({name, _, _}, module), do: {name, [], module}
+  defp _gen_arg(tuple, module) when is_tuple(tuple), do: tuple
 
-  defp genBody(expression, module) do
-    case expression do
-      {:__block__, meta, list} ->
-        trList = list |> Enum.map(&(translate(&1, module)))
-        {:__block__, meta, trList}
-      tuple -> translate(tuple, module)
-    end
+  defp gen_body({:__block__, meta, list}, module) do
+    trList = list |> Enum.map(&(translate(&1, module)))
+    {:__block__, meta, trList}
   end
+  defp gen_body(tuple, module), do: translate(tuple, module)
 
   defp translate(atom, _) when is_atom(atom), do: atom
   defp translate(tuple, module) when is_tuple(tuple) do
@@ -196,21 +191,21 @@ defmodule ContextEX do
   end
   defp translate(any, _), do: any
 
-  defp genGenericFunctionAST({funcName, arity}, module) do
-    args = genDummyArgs(arity, module)
+  defp gen_genericfunction_ast({funcName, arity}, module) do
+    args = gen_dummy_args(arity, module)
     {:def, [context: module, import: Kernel],
       [{funcName, [context: module], args},
        [do:
          {:__block__, [],[
-          {:=, [], [{:layer, [], module}, {:getActiveLayers, [], module}]},
-          {partialFuncName(funcName), [context: module],
+          {:=, [], [{:layer, [], module}, {:get_activelayers, [], module}]},
+          {partialfunc_name(funcName), [context: module],
             # pass activated layers for first arg
             List.insert_at(args, 0, {:layer, [], module})}
          ]}]]}
   end
 
-  defp genDummyArgs(0, _), do: []
-  defp genDummyArgs(num, module) do
+  defp gen_dummy_args(0, _), do: []
+  defp gen_dummy_args(num, module) do
     Enum.map(1.. num, fn(x) ->
       {String.to_atom("var" <> Integer.to_string(x)), [], module}
     end)
