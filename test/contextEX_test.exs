@@ -110,14 +110,14 @@ defmodule ContextEXTest do
     def start(pid) do
       spawn(fn ->
         init_context
-        receiveRet(pid)
+        receive_ret(pid)
       end)
     end
-    def receiveRet(pid) do
+    defp receive_ret(pid) do
       receive do
         arg -> send pid, f(arg)
       end
-      receiveRet pid
+      receive_ret pid
     end
 
     deflf f(1), do: 1
