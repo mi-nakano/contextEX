@@ -30,7 +30,7 @@ defmodule ContextEXTest do
   end
 
 
-  test "layer test" do
+  test "layer" do
     context1 = %{:categoryA => :layer1}
     context2 = %{:categoryB => :layer2}
     context3 = %{:categoryB => :layer3}
@@ -53,7 +53,7 @@ defmodule ContextEXTest do
     assert get_activelayers(p) == Map.merge(context4, context3)
   end
 
-  test "spawn test" do
+  test "spawn" do
     context1 = %{:categoryA => :layer1}
     p1 = Caller.start
     Process.sleep 100
@@ -68,7 +68,7 @@ defmodule ContextEXTest do
     assert get_activelayers(p1) == context1
   end
 
-  test "layered function test" do
+  test "layered function" do
     p = Caller.start
     send p, {:func, self}
     assert_receive 0
@@ -86,7 +86,7 @@ defmodule ContextEXTest do
     assert_receive 3
   end
 
-  test "group activation test" do
+  test "group activation" do
     p1 = Caller.start(:groupA)
     p2 = Caller.start(:groupA)
     p3 = Caller.start(:groupB)
