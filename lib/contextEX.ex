@@ -162,14 +162,11 @@ defmodule ContextEX do
   defp _gen_arg({name, _, _}, module), do: {name, [], module}
   defp _gen_arg(tuple, module) when is_tuple(tuple), do: tuple
 
-  defp gen_body(expression, module) do
-    case expression do
-      {:__block__, meta, list} ->
-        trList = list |> Enum.map(&(translate(&1, module)))
-        {:__block__, meta, trList}
-      tuple -> translate(tuple, module)
-    end
+  defp gen_body({:__block__, meta, list}, module) do
+    trList = list |> Enum.map(&(translate(&1, module)))
+    {:__block__, meta, trList}
   end
+  defp gen_body(tuple, module), do: translate(tuple, module)
 
   defp translate(atom, _) when is_atom(atom), do: atom
   defp translate(tuple, module) when is_tuple(tuple) do
