@@ -123,9 +123,7 @@ defmodule ContextEX do
   end
 
   defmacro deflf(func, do: bodyExp) do
-    quote do
-      deflf(unquote(func), %{}, do: unquote(bodyExp))
-    end
+    quote do: deflf(unquote(func), %{}, do: unquote(bodyExp))
   end
 
   defmacro deflf(func, mapExp \\ %{}, do: bodyExp) do
