@@ -2,6 +2,9 @@ defmodule ContextEX do
   @topAgent :ContextEXAgent
   @noneGroup :noneGroup
 
+  @partial_prefix "_partial_"
+  @arg_name "arg"
+
   defmacro __using__(_options) do
     quote do
       import unquote(__MODULE__)
@@ -147,7 +150,7 @@ defmodule ContextEX do
 
 
   defp partialfunc_name(funcName) do
-    String.to_atom("_partial_" <> Atom.to_string(funcName))
+    String.to_atom(@partial_prefix <> Atom.to_string(funcName))
   end
 
   defp gen_genericfunction_ast({funcName, arity}, module) do
@@ -166,7 +169,7 @@ defmodule ContextEX do
   defp gen_dummy_args(0, _), do: []
   defp gen_dummy_args(num, module) do
     Enum.map(1.. num, fn(x) ->
-      {String.to_atom("var" <> Integer.to_string(x)), [], module}
+      {String.to_atom(@arg_name <> Integer.to_string(x)), [], module}
     end)
   end
 end
