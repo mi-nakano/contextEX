@@ -122,7 +122,8 @@ defmodule ContextEXTest do
 
     deflf f(1), do: 1
     deflf f(:atom), do: :atom
-    deflf f({1, 2}), do: 0
+    deflf f({x, y}), do: x + y
+    deflf f([_head | tail]), do: tail
     deflf f(struct), do: {struct.name, struct.value}
   end
 
@@ -135,7 +136,10 @@ defmodule ContextEXTest do
     assert_receive :atom
 
     send pid, {1, 2}
-    assert_receive 0
+    assert_receive 3
+
+    send pid, [1, 2, 3]
+    assert_receive [2, 3]
 
     send pid, %MyStruct{name: :n, value: :val}
     assert_receive {:n, :val}

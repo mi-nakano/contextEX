@@ -126,24 +126,22 @@ defmodule ContextEX do
     quote do: deflf(unquote(func), %{}, do: unquote(bodyExp))
   end
 
-  defmacro deflf(func, mapExp \\ %{}, do: bodyExp) do
-    {name, _, argsExp} = func
+  defmacro deflf({name, meta, argsExp}, mapExp \\ %{}, do: bodyExp) do
     arity = length(argsExp)
-    body = gen_body(bodyExp, __CALLER__.module)
-    pfName = partialfunc_name(name)
-    args = gen_args(argsExp, __CALLER__.module)
+    pf_name = partialfunc_name(name)
+    new_args = List.insert_at(argsExp, 0, mapExp)
+    new_definition = {pf_name, meta, new_args}
 
-    quote bind_quoted: [name: name, arity: arity, body: Macro.escape(body), map: mapExp, pfName: pfName, args: Macro.escape(args)] do
-      # register layered func
+    quote bind_quoted: [name: name, arity: arity, body: Macro.escape(bodyExp), definition: Macro.escape(new_definition)] do
+      # register layered function
       if @layeredFunc[name] != arity do
         @layeredFunc {name, arity}
       end
 
-      # defp partialFunc in Caller module
-      layer = {:%{}, [], Map.to_list(map)}
-      partialFuncAST = {:defp, [context: __MODULE__, import: Kernel],
-        [{pfName, [context: __MODULE__], List.insert_at(args, 0, layer)}, [do: body]]}
-      Module.eval_quoted __MODULE__, partialFuncAST
+      # define partialFunc in Caller module
+      Kernel.defp(unquote(definition)) do
+        unquote(body)
+      end
     end
   end
 
@@ -151,45 +149,6 @@ defmodule ContextEX do
   defp partialfunc_name(funcName) do
     String.to_atom("_partial_" <> Atom.to_string(funcName))
   end
-
-  defp gen_args(args, module) do
-    Enum.map(args, fn(arg) -> _gen_arg(arg, module) end)
-  end
-  defp _gen_arg(atom, _) when is_atom(atom), do: atom
-  defp _gen_arg(num, _) when is_number(num), do: num
-  defp _gen_arg({name, _, _}, module), do: {name, [], module}
-  defp _gen_arg(tuple, module) when is_tuple(tuple), do: tuple
-
-  defp gen_body({:__block__, meta, list}, module) do
-    trList = list |> Enum.map(&(translate(&1, module)))
-    {:__block__, meta, trList}
-  end
-  defp gen_body(tuple, module), do: translate(tuple, module)
-
-  defp translate(atom, _) when is_atom(atom), do: atom
-  defp translate(tuple, module) when is_tuple(tuple) do
-    case tuple do
-      # make tupple of size = 2
-      {t1, t2} when is_tuple(t1) and is_tuple(t2) ->
-        {translate(t1, module), translate(t2, module)}
-      # variable
-      {atom, _, nil} when is_atom(atom) -> {atom, [], module}
-      # apply function
-      {atom, _, list} when is_atom(atom) and is_list(list) ->
-        {atom, [context: module, import: Kernel], translate(list, module)}
-      # inner tuple
-      {tp, _, nil} when is_tuple(tp) ->
-        {translate(tp, module), [context: module, import: Kernel], []}
-      {tp, _, list} when is_tuple(tp) and is_list(list) ->
-        {translate(tp, module), [context: module, import: Kernel], translate(list, module)}
-      # other
-      tuple -> tuple
-    end
-  end
-  defp translate(list, module) when is_list(list) do
-    list |> Enum.map(&(translate(&1, module)))
-  end
-  defp translate(any, _), do: any
 
   defp gen_genericfunction_ast({funcName, arity}, module) do
     args = gen_dummy_args(arity, module)
