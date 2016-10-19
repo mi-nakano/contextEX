@@ -43,12 +43,13 @@ defmodule ContextEX do
         end
       end
 
-      self_pid = self
-      {:ok, layer_pid} = Agent.start_link(fn -> %{} end)
-      top_agent = :global.whereis_name unquote(@top_agent)
-      Agent.update(top_agent, fn(state) ->
-        Map.put(state, {group, self_pid}, layer_pid)
-      end)
+      with  self_pid = self,
+            {:ok, layer_pid} = Agent.start_link(fn -> %{} end),
+            top_agent = :global.whereis_name(unquote(@top_agent)),
+      do:
+            Agent.update(top_agent, fn(state) ->
+              Map.put(state, {group, self_pid}, layer_pid)
+            end)
     end
   end
 
@@ -57,14 +58,16 @@ defmodule ContextEX do
   """
   defmacro get_activelayers(pid) do
     quote do
-      self_pid = unquote(pid)
-      top_agent = :global.whereis_name unquote(@top_agent)
-      res = Agent.get(top_agent, fn(state) ->
-        state |> Enum.find(fn(x) ->
-          {{_, p}, _} = x
-          p == self_pid
-        end)
-      end)
+      res =
+        with  self_pid = unquote(pid),
+              top_agent = :global.whereis_name(unquote(@top_agent)),
+        do:
+              Agent.get(top_agent, fn(state) ->
+                state |> Enum.find(fn(x) ->
+                  {{_, p}, _} = x
+                  p == self_pid
+                end)
+              end)
       if res == nil do
         nil
       else
@@ -79,14 +82,16 @@ defmodule ContextEX do
   """
   defmacro activate_layer(pid, map) do
     quote do
-      self_pid = unquote(pid)
-      top_agent = :global.whereis_name unquote(@top_agent)
-      res = Agent.get(top_agent, fn(state) ->
-        state |> Enum.find(fn(x) ->
-          {{_, p}, _} = x
-          p == self_pid
-        end)
-      end)
+      res =
+        with  self_pid = unquote(pid),
+              top_agent = :global.whereis_name(unquote(@top_agent)),
+        do:
+              Agent.get(top_agent, fn(state) ->
+                state |> Enum.find(fn(x) ->
+                  {{_, p}, _} = x
+                  p == self_pid
+                end)
+              end)
       if res == nil do
         nil
       else
@@ -130,12 +135,12 @@ defmodule ContextEX do
   end
 
   defmacro deflf({name, meta, args_exp}, map_exp \\ %{}, do: body_exp) do
-    arity = length(args_exp)
-    pf_name = partialfunc_name(name)
-    new_args = List.insert_at(args_exp, 0, map_exp)
-    new_definition = {pf_name, meta, new_args}
+    new_definition =
+      with  pf_name = partialfunc_name(name),
+            new_args = List.insert_at(args_exp, 0, map_exp),
+      do: {pf_name, meta, new_args}
 
-    quote bind_quoted: [name: name, arity: arity, body: Macro.escape(body_exp), definition: Macro.escape(new_definition)] do
+    quote bind_quoted: [name: name, arity: length(args_exp), body: Macro.escape(body_exp), definition: Macro.escape(new_definition)] do
       # register layered function
       if @layered_function[name] != arity do
         @layered_function {name, arity}
