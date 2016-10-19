@@ -9,7 +9,7 @@ defmodule ContextEX do
     quote do
       import unquote(__MODULE__)
       @before_compile unquote(__MODULE__)
-      Module.register_attribute __MODULE__, :layeredFunc, accumulate: true, persist: false
+      Module.register_attribute __MODULE__, :layered_function, accumulate: true, persist: false
 
       defp get_activelayers(), do: get_activelayers(self)
       defp activate_layer(map), do: activate_layer(self, map)
@@ -18,7 +18,7 @@ defmodule ContextEX do
   end
 
   defmacro __before_compile__(env) do
-    attrs = Module.get_attribute(env.module, :layeredFunc)
+    attrs = Module.get_attribute(env.module, :layered_function)
     defList = attrs |> Enum.map(&(gen_genericfunction_ast(&1, env.module)))
 
     # return AST
@@ -137,8 +137,8 @@ defmodule ContextEX do
 
     quote bind_quoted: [name: name, arity: arity, body: Macro.escape(bodyExp), definition: Macro.escape(new_definition)] do
       # register layered function
-      if @layeredFunc[name] != arity do
-        @layeredFunc {name, arity}
+      if @layered_function[name] != arity do
+        @layered_function {name, arity}
       end
 
       # define partialFunc in Caller module
