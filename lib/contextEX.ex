@@ -27,12 +27,6 @@ defmodule ContextEX do
 
   defmacro init_context(arg \\ nil) do
     quote do
-      group = if unquote(arg) == nil do
-        unquote(@none_group)
-      else
-        unquote(arg)
-      end
-
       unless (is_pid :global.whereis_name(unquote(@top_agent))) do
         {:ok, pid} = Agent.start(fn -> %{} end)
         try do
@@ -46,6 +40,7 @@ defmodule ContextEX do
       with  self_pid = self,
             {:ok, layer_pid} = Agent.start_link(fn -> %{} end),
             top_agent = :global.whereis_name(unquote(@top_agent)),
+            group = if(unquote(arg) == nil, do: nil, else: unquote(arg)),
       do:
             Agent.update(top_agent, fn(state) ->
               Map.put(state, {group, self_pid}, layer_pid)
