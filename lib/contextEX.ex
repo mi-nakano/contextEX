@@ -125,17 +125,17 @@ defmodule ContextEX do
     end
   end
 
-  defmacro deflf(func, do: bodyExp) do
-    quote do: deflf(unquote(func), %{}, do: unquote(bodyExp))
+  defmacro deflf(func, do: body_exp) do
+    quote do: deflf(unquote(func), %{}, do: unquote(body_exp))
   end
 
-  defmacro deflf({name, meta, argsExp}, mapExp \\ %{}, do: bodyExp) do
-    arity = length(argsExp)
+  defmacro deflf({name, meta, args_exp}, map_exp \\ %{}, do: body_exp) do
+    arity = length(args_exp)
     pf_name = partialfunc_name(name)
-    new_args = List.insert_at(argsExp, 0, mapExp)
+    new_args = List.insert_at(args_exp, 0, map_exp)
     new_definition = {pf_name, meta, new_args}
 
-    quote bind_quoted: [name: name, arity: arity, body: Macro.escape(bodyExp), definition: Macro.escape(new_definition)] do
+    quote bind_quoted: [name: name, arity: arity, body: Macro.escape(body_exp), definition: Macro.escape(new_definition)] do
       # register layered function
       if @layered_function[name] != arity do
         @layered_function {name, arity}
