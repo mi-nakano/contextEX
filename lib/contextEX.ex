@@ -1,6 +1,6 @@
 defmodule ContextEX do
-  @topAgent :ContextEXAgent
-  @noneGroup :noneGroup
+  @top_agent :ContextEXAgent
+  @none_group :none_group
 
   @partial_prefix "_partial_"
   @arg_name "arg"
@@ -28,15 +28,15 @@ defmodule ContextEX do
   defmacro init_context(arg \\ nil) do
     quote do
       group = if unquote(arg) == nil do
-        unquote(@noneGroup)
+        unquote(@none_group)
       else
         unquote(arg)
       end
 
-      if !(is_pid :global.whereis_name(unquote(@topAgent))) do
+      if !(is_pid :global.whereis_name(unquote(@top_agent))) do
         {:ok, pid} = Agent.start(fn -> %{} end)
         try do
-          :global.register_name unquote(@topAgent), pid
+          :global.register_name unquote(@top_agent), pid
         rescue
           ArgumentError ->
             IO.puts "(Warn) ArgumentError! at initializing TopAgent"
@@ -44,10 +44,10 @@ defmodule ContextEX do
       end
 
       selfPid = self
-      {:ok, layerPid} = Agent.start_link(fn -> %{} end)
-      topAgent = :global.whereis_name unquote(@topAgent)
-      Agent.update(topAgent, fn(state) ->
-        Map.put(state, {group, selfPid}, layerPid)
+      {:ok, layer_pid} = Agent.start_link(fn -> %{} end)
+      top_agent = :global.whereis_name unquote(@top_agent)
+      Agent.update(top_agent, fn(state) ->
+        Map.put(state, {group, selfPid}, layer_pid)
       end)
     end
   end
@@ -58,8 +58,8 @@ defmodule ContextEX do
   defmacro get_activelayers(pid) do
     quote do
       selfPid = unquote(pid)
-      topAgent = :global.whereis_name unquote(@topAgent)
-      res = Agent.get(topAgent, fn(state) ->
+      top_agent = :global.whereis_name unquote(@top_agent)
+      res = Agent.get(top_agent, fn(state) ->
         state |> Enum.find(fn(x) ->
           {{_, p}, _} = x
           p == selfPid
@@ -80,8 +80,8 @@ defmodule ContextEX do
   defmacro activate_layer(pid, map) do
     quote do
       selfPid = unquote(pid)
-      topAgent = :global.whereis_name unquote(@topAgent)
-      res = Agent.get(topAgent, fn(state) ->
+      top_agent = :global.whereis_name unquote(@top_agent)
+      res = Agent.get(top_agent, fn(state) ->
         state |> Enum.find(fn(x) ->
           {{_, p}, _} = x
           p == selfPid
@@ -100,8 +100,8 @@ defmodule ContextEX do
 
   defmacro activate_group(group, map) do
     quote do
-      topAgent = :global.whereis_name unquote(@topAgent)
-      pids = Agent.get(topAgent, fn(state) ->
+      top_agent = :global.whereis_name unquote(@top_agent)
+      pids = Agent.get(top_agent, fn(state) ->
         state |> Enum.filter(fn(x) ->
           {{g, _}, _} = x
           g == unquote(group)
