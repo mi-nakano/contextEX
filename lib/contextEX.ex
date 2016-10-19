@@ -149,18 +149,18 @@ defmodule ContextEX do
   end
 
 
-  defp partialfunc_name(funcName) do
-    String.to_atom(@partial_prefix <> Atom.to_string(funcName))
+  defp partialfunc_name(func_name) do
+    String.to_atom(@partial_prefix <> Atom.to_string(func_name))
   end
 
-  defp gen_genericfunction_ast({funcName, arity}, module) do
+  defp gen_genericfunction_ast({func_name, arity}, module) do
     args = gen_dummy_args(arity, module)
     {:def, [context: module, import: Kernel],
-      [{funcName, [context: module], args},
+      [{func_name, [context: module], args},
        [do:
          {:__block__, [],[
           {:=, [], [{:layer, [], module}, {:get_activelayers, [], module}]},
-          {partialfunc_name(funcName), [context: module],
+          {partialfunc_name(func_name), [context: module],
             # pass activated layers for first arg
             List.insert_at(args, 0, {:layer, [], module})}
          ]}]]}
