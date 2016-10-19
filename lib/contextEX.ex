@@ -33,7 +33,7 @@ defmodule ContextEX do
         unquote(arg)
       end
 
-      if !(is_pid :global.whereis_name(unquote(@top_agent))) do
+      unless (is_pid :global.whereis_name(unquote(@top_agent))) do
         {:ok, pid} = Agent.start(fn -> %{} end)
         try do
           :global.register_name unquote(@top_agent), pid
