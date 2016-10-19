@@ -33,10 +33,10 @@ defmodule ContextEX do
         unquote(arg)
       end
 
-      if !(unquote(@topAgent) in Process.registered) do
+      if !(is_pid :global.whereis_name(unquote(@topAgent))) do
         {:ok, pid} = Agent.start(fn -> %{} end)
         try do
-          Process.register pid, unquote(@topAgent)
+          :global.register_name unquote(@topAgent), pid
         rescue
           ArgumentError ->
             IO.puts "(Warn) ArgumentError! at initializing TopAgent"
@@ -45,7 +45,7 @@ defmodule ContextEX do
 
       selfPid = self
       {:ok, layerPid} = Agent.start_link(fn -> %{} end)
-      topAgent = Process.whereis unquote(@topAgent)
+      topAgent = :global.whereis_name unquote(@topAgent)
       Agent.update(topAgent, fn(state) ->
         Map.put(state, {group, selfPid}, layerPid)
       end)
@@ -58,7 +58,7 @@ defmodule ContextEX do
   defmacro get_activelayers(pid) do
     quote do
       selfPid = unquote(pid)
-      topAgent = Process.whereis unquote(@topAgent)
+      topAgent = :global.whereis_name unquote(@topAgent)
       res = Agent.get(topAgent, fn(state) ->
         state |> Enum.find(fn(x) ->
           {{_, p}, _} = x
@@ -80,7 +80,7 @@ defmodule ContextEX do
   defmacro activate_layer(pid, map) do
     quote do
       selfPid = unquote(pid)
-      topAgent = Process.whereis unquote(@topAgent)
+      topAgent = :global.whereis_name unquote(@topAgent)
       res = Agent.get(topAgent, fn(state) ->
         state |> Enum.find(fn(x) ->
           {{_, p}, _} = x
@@ -100,7 +100,7 @@ defmodule ContextEX do
 
   defmacro activate_group(group, map) do
     quote do
-      topAgent = Process.whereis unquote(@topAgent)
+      topAgent = :global.whereis_name unquote(@topAgent)
       pids = Agent.get(topAgent, fn(state) ->
         state |> Enum.filter(fn(x) ->
           {{g, _}, _} = x
