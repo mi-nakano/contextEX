@@ -43,11 +43,11 @@ defmodule ContextEX do
         end
       end
 
-      selfPid = self
+      self_pid = self
       {:ok, layer_pid} = Agent.start_link(fn -> %{} end)
       top_agent = :global.whereis_name unquote(@top_agent)
       Agent.update(top_agent, fn(state) ->
-        Map.put(state, {group, selfPid}, layer_pid)
+        Map.put(state, {group, self_pid}, layer_pid)
       end)
     end
   end
@@ -57,19 +57,19 @@ defmodule ContextEX do
   """
   defmacro get_activelayers(pid) do
     quote do
-      selfPid = unquote(pid)
+      self_pid = unquote(pid)
       top_agent = :global.whereis_name unquote(@top_agent)
       res = Agent.get(top_agent, fn(state) ->
         state |> Enum.find(fn(x) ->
           {{_, p}, _} = x
-          p == selfPid
+          p == self_pid
         end)
       end)
       if res == nil do
         nil
       else
-        {_, layerPid} = res
-        Agent.get(layerPid, fn(state) -> state end)
+        {_, layer_pid} = res
+        Agent.get(layer_pid, fn(state) -> state end)
       end
     end
   end
@@ -79,19 +79,19 @@ defmodule ContextEX do
   """
   defmacro activate_layer(pid, map) do
     quote do
-      selfPid = unquote(pid)
+      self_pid = unquote(pid)
       top_agent = :global.whereis_name unquote(@top_agent)
       res = Agent.get(top_agent, fn(state) ->
         state |> Enum.find(fn(x) ->
           {{_, p}, _} = x
-          p == selfPid
+          p == self_pid
         end)
       end)
       if res == nil do
         nil
       else
-        {_, layerPid} = res
-        Agent.update(layerPid, fn(state) ->
+        {_, layer_pid} = res
+        Agent.update(layer_pid, fn(state) ->
           Map.merge(state, unquote(map))
         end)
       end
