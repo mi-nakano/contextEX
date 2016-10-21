@@ -25,18 +25,18 @@ defmodule ContextEX do
     {:__block__, [], defList}
   end
 
+  def start(_type, _args) do
+    unless (is_pid :global.whereis_name(@top_agent)) do
+      try do
+        Agent.start(fn -> %{} end, [name: {:global, @top_agent}])
+      rescue
+        e -> e
+      end
+    end
+  end
+
   defmacro init_context(arg \\ nil) do
     quote do
-      unless (is_pid :global.whereis_name(unquote(@top_agent))) do
-        {:ok, pid} = Agent.start(fn -> %{} end)
-        try do
-          :global.register_name unquote(@top_agent), pid
-        rescue
-          ArgumentError ->
-            IO.puts "(Warn) ArgumentError! at initializing TopAgent"
-        end
-      end
-
       with  self_pid = self,
             {:ok, layer_pid} = Agent.start_link(fn -> %{} end),
             top_agent = :global.whereis_name(unquote(@top_agent)),
