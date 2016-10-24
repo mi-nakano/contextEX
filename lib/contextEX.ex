@@ -1,5 +1,5 @@
 defmodule ContextEX do
-  @top_agent :ContextEXAgent
+  @top_agent_name ContextEXAgent
   @none_group :none_group
 
   @partial_prefix "_partial_"
@@ -26,9 +26,9 @@ defmodule ContextEX do
   end
 
   def start(_type, _args) do
-    unless (is_pid :global.whereis_name(@top_agent)) do
+    unless (is_pid :global.whereis_name(@top_agent_name)) do
       try do
-        Agent.start(fn -> %{} end, [name: {:global, @top_agent}])
+        Agent.start(fn -> %{} end, [name: {:global, @top_agent_name}])
       rescue
         e -> e
       end
@@ -39,7 +39,7 @@ defmodule ContextEX do
     quote do
       with  self_pid = self,
             {:ok, layer_pid} = Agent.start_link(fn -> %{} end),
-            top_agent = :global.whereis_name(unquote(@top_agent)),
+            top_agent = :global.whereis_name(unquote(@top_agent_name)),
             group = if(unquote(arg) == nil, do: nil, else: unquote(arg)),
       do:
             Agent.update(top_agent, fn(state) ->
@@ -55,7 +55,7 @@ defmodule ContextEX do
     quote do
       res =
         with  self_pid = unquote(pid),
-              top_agent = :global.whereis_name(unquote(@top_agent)),
+              top_agent = :global.whereis_name(unquote(@top_agent_name)),
         do:
               Agent.get(top_agent, fn(state) ->
                 state |> Enum.find(fn(x) ->
@@ -79,7 +79,7 @@ defmodule ContextEX do
     quote do
       res =
         with  self_pid = unquote(pid),
-              top_agent = :global.whereis_name(unquote(@top_agent)),
+              top_agent = :global.whereis_name(unquote(@top_agent_name)),
         do:
               Agent.get(top_agent, fn(state) ->
                 state |> Enum.find(fn(x) ->
@@ -100,7 +100,7 @@ defmodule ContextEX do
 
   defmacro activate_group(group, map) do
     quote do
-      top_agent = :global.whereis_name unquote(@top_agent)
+      top_agent = :global.whereis_name unquote(@top_agent_name)
       pids = Agent.get(top_agent, fn(state) ->
         state |> Enum.filter(fn(x) ->
           {{g, _}, _} = x
