@@ -13,6 +13,7 @@ defmodule ContextEX do
 
       defp get_activelayers(), do: get_activelayers(self)
       defp cast_activate_layer(map), do: cast_activate_layer(self, map)
+      defp call_activate_layer(map), do: call_activate_layer(self, map)
       defp is_active?(layer), do: is_active?(self, layer)
     end
   end
@@ -73,6 +74,8 @@ defmodule ContextEX do
   end
 
   @doc """
+  update active layers
+  return :ok
   return nil when pid isn't registered
   """
   defmacro cast_activate_layer(pid, map) do
@@ -94,7 +97,19 @@ defmodule ContextEX do
         Agent.update(layer_pid, fn(state) ->
           Map.merge(state, unquote(map))
         end)
+        :ok
       end
+    end
+  end
+
+  @doc """
+  update active layers
+  return latest active layers
+  """
+  defmacro call_activate_layer(pid, map) do
+    quote bind_quoted: [pid: pid, map: map] do
+      cast_activate_layer(pid, map)
+      get_activelayers(pid)
     end
   end
 
@@ -115,6 +130,7 @@ defmodule ContextEX do
           Map.merge(state, unquote(map))
         end)
       end)
+      :ok
     end
   end
 

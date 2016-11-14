@@ -39,32 +39,24 @@ defmodule ContextEXTest do
     Process.sleep 100
     assert get_activelayers(p) == %{}
 
-    cast_activate_layer(p, context1)
-    Process.sleep 100
-    assert get_activelayers(p) == context1
+    assert call_activate_layer(p, context1) == context1
 
-    cast_activate_layer(p, context2)
-    Process.sleep 100
     context4 = Map.merge(context1, context2)
-    assert get_activelayers(p) == context4
+    assert call_activate_layer(p, context2) == context4
 
-    cast_activate_layer(p, context3)
-    Process.sleep 100
-    assert get_activelayers(p) == Map.merge(context4, context3)
+    assert call_activate_layer(p, context3) == Map.merge(context4, context3)
   end
 
   test "spawn" do
     context1 = %{:categoryA => :layer1}
     p1 = Caller.start
     Process.sleep 100
-    cast_activate_layer(p1, context1)
-    assert get_activelayers(p1) == context1
+    assert call_activate_layer(p1, context1) == context1
 
     context2 = %{:categoryA => :layer2}
     p2 = Caller.start
     Process.sleep 100
-    cast_activate_layer(p2, context2)
-    assert get_activelayers(p2) == context2
+    assert call_activate_layer(p2, context2) == context2
     assert get_activelayers(p1) == context1
   end
 
