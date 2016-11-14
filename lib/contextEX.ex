@@ -1,5 +1,5 @@
 defmodule ContextEX do
-  @top_agent_name ContextEXAgent
+  @top_agent_name :ContextEXAgent
   @none_group :none_group
 
   @partial_prefix "_partial_"
@@ -12,7 +12,8 @@ defmodule ContextEX do
       Module.register_attribute __MODULE__, :layered_function, accumulate: true, persist: false
 
       defp get_activelayers(), do: get_activelayers(self)
-      defp activate_layer(map), do: activate_layer(self, map)
+      defp cast_activate_layer(map), do: cast_activate_layer(self, map)
+      defp call_activate_layer(map), do: call_activate_layer(self, map)
       defp is_active?(layer), do: is_active?(self, layer)
     end
   end
@@ -73,9 +74,11 @@ defmodule ContextEX do
   end
 
   @doc """
+  update active layers
+  return :ok
   return nil when pid isn't registered
   """
-  defmacro activate_layer(pid, map) do
+  defmacro cast_activate_layer(pid, map) do
     quote do
       res =
         with  self_pid = unquote(pid),
@@ -94,11 +97,23 @@ defmodule ContextEX do
         Agent.update(layer_pid, fn(state) ->
           Map.merge(state, unquote(map))
         end)
+        :ok
       end
     end
   end
 
-  defmacro activate_group(group, map) do
+  @doc """
+  update active layers
+  return latest active layers
+  """
+  defmacro call_activate_layer(pid, map) do
+    quote bind_quoted: [pid: pid, map: map] do
+      cast_activate_layer(pid, map)
+      get_activelayers(pid)
+    end
+  end
+
+  defmacro cast_activate_group(group, map) do
     quote do
       top_agent = :global.whereis_name unquote(@top_agent_name)
       pids = Agent.get(top_agent, fn(state) ->
@@ -115,6 +130,7 @@ defmodule ContextEX do
           Map.merge(state, unquote(map))
         end)
       end)
+      :ok
     end
   end
 
