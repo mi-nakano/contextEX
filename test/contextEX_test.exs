@@ -8,10 +8,12 @@ defmodule ContextEXTest do
     @context1 %{:categoryA => :layer1}
 
     def start(groupName \\ nil) do
-      spawn(fn ->
+      pid = spawn(fn ->
         init_context(groupName)
         routine
       end)
+      Process.sleep 100
+      pid
     end
 
     def routine() do
@@ -36,7 +38,6 @@ defmodule ContextEXTest do
     context3 = %{:categoryB => :layer3}
 
     p = Caller.start
-    Process.sleep 100
     assert get_activelayers(p) == %{}
 
     assert call_activate_layer(p, context1) == context1
@@ -50,12 +51,10 @@ defmodule ContextEXTest do
   test "spawn" do
     context1 = %{:categoryA => :layer1}
     p1 = Caller.start
-    Process.sleep 100
     assert call_activate_layer(p1, context1) == context1
 
     context2 = %{:categoryA => :layer2}
     p2 = Caller.start
-    Process.sleep 100
     assert call_activate_layer(p2, context2) == context2
     assert get_activelayers(p1) == context1
   end
@@ -82,10 +81,8 @@ defmodule ContextEXTest do
     p1 = Caller.start(:groupA)
     p2 = Caller.start(:groupA)
     p3 = Caller.start(:groupB)
-    Process.sleep 100
 
     cast_activate_group(:groupA, %{:categoryA => :layer1})
-    Process.sleep 100
     assert get_activelayers(p1) == %{:categoryA => :layer1}
     assert get_activelayers(p2) == %{:categoryA => :layer1}
     assert get_activelayers(p3) == %{}
