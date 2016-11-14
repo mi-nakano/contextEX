@@ -39,16 +39,16 @@ defmodule ContextEXTest do
     Process.sleep 100
     assert get_activelayers(p) == %{}
 
-    activate_layer(p, context1)
+    cast_activate_layer(p, context1)
     Process.sleep 100
     assert get_activelayers(p) == context1
 
-    activate_layer(p, context2)
+    cast_activate_layer(p, context2)
     Process.sleep 100
     context4 = Map.merge(context1, context2)
     assert get_activelayers(p) == context4
 
-    activate_layer(p, context3)
+    cast_activate_layer(p, context3)
     Process.sleep 100
     assert get_activelayers(p) == Map.merge(context4, context3)
   end
@@ -57,13 +57,13 @@ defmodule ContextEXTest do
     context1 = %{:categoryA => :layer1}
     p1 = Caller.start
     Process.sleep 100
-    activate_layer(p1, context1)
+    cast_activate_layer(p1, context1)
     assert get_activelayers(p1) == context1
 
     context2 = %{:categoryA => :layer2}
     p2 = Caller.start
     Process.sleep 100
-    activate_layer(p2, context2)
+    cast_activate_layer(p2, context2)
     assert get_activelayers(p2) == context2
     assert get_activelayers(p1) == context1
   end
@@ -73,15 +73,15 @@ defmodule ContextEXTest do
     send p, {:func, self}
     assert_receive 0
 
-    activate_layer(p, %{:categoryA => :layer1})
+    cast_activate_layer(p, %{:categoryA => :layer1})
     send p, {:func, self}
     assert_receive 1
 
-    activate_layer(p, %{:categoryB => :layer2})
+    cast_activate_layer(p, %{:categoryB => :layer2})
     send p, {:func, self}
     assert_receive 2
 
-    activate_layer(p, %{:categoryB => :layer3})
+    cast_activate_layer(p, %{:categoryB => :layer3})
     send p, {:func, self}
     assert_receive 3
   end
@@ -92,7 +92,7 @@ defmodule ContextEXTest do
     p3 = Caller.start(:groupB)
     Process.sleep 100
 
-    activate_group(:groupA, %{:categoryA => :layer1})
+    cast_activate_group(:groupA, %{:categoryA => :layer1})
     Process.sleep 100
     assert get_activelayers(p1) == %{:categoryA => :layer1}
     assert get_activelayers(p2) == %{:categoryA => :layer1}
