@@ -90,12 +90,9 @@ defmodule ContextEX do
           p == self_pid
         end)
       end)
-      if res == nil do
-        IO.puts "hey, not registered!"
-        nil
-      else
-        {_, _, layers} = res
-        layers
+      case res do
+        nil -> nil
+        {_, _, layers} -> layers
       end
     end
   end
@@ -136,8 +133,7 @@ defmodule ContextEX do
   defmacro cast_activate_group(target_group, map) do
     quote bind_quoted: [top_agent_name: @top_agent_name, target_group: target_group, map: map] do
       top_agent = :global.whereis_name top_agent_name
-      pids = Agent.get(top_agent, fn(state) -> state end)
-      pids |> Enum.each(fn(pid) ->
+      Agent.get(top_agent, fn(state) -> state end) |> Enum.each(fn(pid) ->
         Agent.update(pid, fn(state) ->
           Enum.map(state, fn(row) ->
             case row do
@@ -170,9 +166,7 @@ defmodule ContextEX do
 
     quote bind_quoted: [name: name, arity: length(args_exp), body: Macro.escape(body_exp), definition: Macro.escape(new_definition)] do
       # register layered function
-      if @layered_function[name] != arity do
-        @layered_function {name, arity}
-      end
+      unless @layered_function[name] == arity, do: @layered_function {name, arity}
 
       # define partialFunc in Caller module
       Kernel.defp(unquote(definition)) do
@@ -182,9 +176,7 @@ defmodule ContextEX do
   end
 
 
-  defp partialfunc_name(func_name) do
-    String.to_atom(@partial_prefix <> Atom.to_string(func_name))
-  end
+  defp partialfunc_name(func_name), do: String.to_atom(@partial_prefix <> Atom.to_string(func_name))
 
   defp gen_genericfunction_ast({func_name, arity}, module) do
     args = gen_dummy_args(arity, module)
