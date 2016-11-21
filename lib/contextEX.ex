@@ -39,13 +39,13 @@ defmodule ContextEX do
   defmacro init_context(arg \\ nil) do
     quote do
       with  self_pid = self,
-            {:ok, layer_pid} = Agent.start_link(fn -> %{} end),
-            top_agent = :global.whereis_name(unquote(@top_agent_name)),
-            group = if(unquote(arg) == nil, do: nil, else: unquote(arg)),
+        {:ok, layer_pid} = Agent.start_link(fn -> %{} end),
+        top_agent = :global.whereis_name(unquote(@top_agent_name)),
+        group = if(unquote(arg) == nil, do: nil, else: unquote(arg)),
       do:
-            Agent.update(top_agent, fn(state) ->
-              Map.put(state, {group, self_pid}, layer_pid)
-            end)
+        Agent.update(top_agent, fn(state) ->
+          Map.put(state, {group, self_pid}, layer_pid)
+        end)
     end
   end
 
@@ -56,14 +56,14 @@ defmodule ContextEX do
     quote do
       res =
         with  self_pid = unquote(pid),
-              top_agent = :global.whereis_name(unquote(@top_agent_name)),
+          top_agent = :global.whereis_name(unquote(@top_agent_name)),
         do:
-              Agent.get(top_agent, fn(state) ->
-                state |> Enum.find(fn(x) ->
-                  {{_, p}, _} = x
-                  p == self_pid
-                end)
-              end)
+          Agent.get(top_agent, fn(state) ->
+            state |> Enum.find(fn(x) ->
+              {{_, p}, _} = x
+              p == self_pid
+            end)
+          end)
       if res == nil do
         nil
       else
@@ -82,14 +82,14 @@ defmodule ContextEX do
     quote do
       res =
         with  self_pid = unquote(pid),
-              top_agent = :global.whereis_name(unquote(@top_agent_name)),
+          top_agent = :global.whereis_name(unquote(@top_agent_name)),
         do:
-              Agent.get(top_agent, fn(state) ->
-                state |> Enum.find(fn(x) ->
-                  {{_, p}, _} = x
-                  p == self_pid
-                end)
-              end)
+          Agent.get(top_agent, fn(state) ->
+            state |> Enum.find(fn(x) ->
+              {{_, p}, _} = x
+              p == self_pid
+            end)
+          end)
       if res == nil do
         nil
       else
