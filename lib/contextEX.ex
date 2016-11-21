@@ -1,9 +1,11 @@
 defmodule ContextEX do
   @top_agent_name :ContextEXAgent
+  @node_agent_prefix "_node_agent_"
   @none_group :none_group
 
   @partial_prefix "_partial_"
   @arg_name "arg"
+
 
   defmacro __using__(_options) do
     quote do
@@ -26,26 +28,52 @@ defmodule ContextEX do
     {:__block__, [], defList}
   end
 
+  @doc """
+  Start global contextServer.
+  This server contains list which is pid of nodeLevel contexteServers.
+  """
   def start(_type, _args) do
     unless (is_pid :global.whereis_name(@top_agent_name)) do
       try do
-        Agent.start(fn -> %{} end, [name: {:global, @top_agent_name}])
+        Agent.start(fn -> [] end, [name: {:global, @top_agent_name}])
       rescue
         e -> e
       end
     end
   end
 
+  @doc """
+  Register process(self) in nodeLevel contextServer.
+  """
   defmacro init_context(arg \\ nil) do
     quote do
       with  self_pid = self,
-        {:ok, layer_pid} = Agent.start_link(fn -> %{} end),
-        top_agent = :global.whereis_name(unquote(@top_agent_name)),
-        group = if(unquote(arg) == nil, do: nil, else: unquote(arg)),
-      do:
-        Agent.update(top_agent, fn(state) ->
-          Map.put(state, {group, self_pid}, layer_pid)
+        top_agent_pid = :global.whereis_name(unquote(@top_agent_name)),
+        node_agent_name = String.to_atom(unquote(@node_agent_prefix) <> Atom.to_string(node)),
+        group = if(unquote(arg) == nil, do: nil, else: unquote(arg))
+      do
+        node_agent_pid =
+          case Process.whereis(node_agent_name) do
+            # unregistered
+            nil ->
+              case Agent.start(fn -> [] end, [name: node_agent_name]) do
+                {:ok, pid} -> pid
+                {:error, {:already_started, pid}} -> pid
+                _ -> raise "Error at init_context!"
+              end
+            # already registered
+            pid -> pid
+          end
+
+        # register self_pid in node_agent
+        Agent.update(node_agent_pid, fn(state) ->
+          [{group, self_pid, %{}} | state]
         end)
+        # register nodeLevel agent's pid in globalLevel agent
+        Agent.update(top_agent_pid, fn(state) ->
+          [node_agent_pid | state]
+        end)
+      end
     end
   end
 
@@ -54,21 +82,20 @@ defmodule ContextEX do
   """
   defmacro get_activelayers(pid) do
     quote do
-      res =
-        with  self_pid = unquote(pid),
-          top_agent = :global.whereis_name(unquote(@top_agent_name)),
-        do:
-          Agent.get(top_agent, fn(state) ->
-            state |> Enum.find(fn(x) ->
-              {{_, p}, _} = x
-              p == self_pid
-            end)
-          end)
+      self_pid = unquote(pid)
+      node_agent_pid = Process.whereis String.to_atom(unquote(@node_agent_prefix) <> Atom.to_string(node))
+      res = Agent.get(node_agent_pid, fn(state) ->
+        state |> Enum.find(fn(x) ->
+          {_group, p, _layers} = x
+          p == self_pid
+        end)
+      end)
       if res == nil do
+        IO.puts "hey, not registered!"
         nil
       else
-        {_, layer_pid} = res
-        Agent.get(layer_pid, fn(state) -> state end)
+        {_, _, layers} = res
+        layers
       end
     end
   end
@@ -80,25 +107,18 @@ defmodule ContextEX do
   """
   defmacro cast_activate_layer(pid, map) do
     quote do
-      res =
-        with  self_pid = unquote(pid),
-          top_agent = :global.whereis_name(unquote(@top_agent_name)),
-        do:
-          Agent.get(top_agent, fn(state) ->
-            state |> Enum.find(fn(x) ->
-              {{_, p}, _} = x
-              p == self_pid
-            end)
+      with  self_pid = unquote(pid),
+        node_agent_pid = Process.whereis(String.to_atom(unquote(@node_agent_prefix) <> Atom.to_string(node))),
+      do:
+        Agent.update(node_agent_pid, fn(state) ->
+          Enum.map(state, fn(x) ->
+            case x do
+              {group, ^self_pid, layers} ->
+                {group, self_pid, Map.merge(layers, unquote(map))}
+              x -> x
+            end
           end)
-      if res == nil do
-        nil
-      else
-        {_, layer_pid} = res
-        Agent.update(layer_pid, fn(state) ->
-          Map.merge(state, unquote(map))
         end)
-        :ok
-      end
     end
   end
 
@@ -113,24 +133,21 @@ defmodule ContextEX do
     end
   end
 
-  defmacro cast_activate_group(group, map) do
-    quote do
-      top_agent = :global.whereis_name unquote(@top_agent_name)
-      pids = Agent.get(top_agent, fn(state) ->
-        state |> Enum.filter(fn(x) ->
-          {{g, _}, _} = x
-          g == unquote(group)
-        end) |> Enum.map(fn(x) ->
-          {_, pid} = x
-          pid
-        end)
-      end)
+  defmacro cast_activate_group(target_group, map) do
+    quote bind_quoted: [top_agent_name: @top_agent_name, target_group: target_group, map: map] do
+      top_agent = :global.whereis_name top_agent_name
+      pids = Agent.get(top_agent, fn(state) -> state end)
       pids |> Enum.each(fn(pid) ->
         Agent.update(pid, fn(state) ->
-          Map.merge(state, unquote(map))
+          Enum.map(state, fn(row) ->
+            case row do
+              {^target_group, pid, layers} ->
+                {target_group, pid, Map.merge(layers, map)}
+              row -> row
+            end
+          end)
         end)
       end)
-      :ok
     end
   end
 
