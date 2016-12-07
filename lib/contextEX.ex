@@ -69,9 +69,24 @@ defmodule ContextEX do
         Agent.update(node_agent_pid, fn(state) ->
           [{group, self_pid, %{}} | state]
         end)
+
         # register nodeLevel agent's pid in globalLevel agent
         Agent.update(top_agent_pid, fn(state) ->
           [node_agent_pid | state]
+        end)
+
+        # unregister when process is down
+        spawn(fn ->
+          Process.monitor(self_pid)
+          receive do
+            msg ->
+              Agent.update(node_agent_pid, fn(state) ->
+                Enum.filter(state, fn(x) ->
+                  {_, pid, _} = x
+                  pid != self_pid
+                end)
+              end)
+          end
         end)
       end
     end
