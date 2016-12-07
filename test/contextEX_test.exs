@@ -3,7 +3,7 @@ defmodule ContextEXTest do
   doctest ContextEX
   import ContextEX
 
-  defmodule Caller do
+  defmodule TestMod do
     use ContextEX
     @context1 %{:categoryA => :layer1}
 
@@ -37,7 +37,7 @@ defmodule ContextEXTest do
     context2 = %{:categoryB => :layer2}
     context3 = %{:categoryB => :layer3}
 
-    p = Caller.start
+    p = TestMod.start
     assert get_activelayers(p) == %{}
 
     assert call_activate_layer(p, context1) == context1
@@ -50,17 +50,17 @@ defmodule ContextEXTest do
 
   test "spawn" do
     context1 = %{:categoryA => :layer1}
-    p1 = Caller.start
+    p1 = TestMod.start
     assert call_activate_layer(p1, context1) == context1
 
     context2 = %{:categoryA => :layer2}
-    p2 = Caller.start
+    p2 = TestMod.start
     assert call_activate_layer(p2, context2) == context2
     assert get_activelayers(p1) == context1
   end
 
   test "layered function" do
-    p = Caller.start
+    p = TestMod.start
     send p, {:func, self}
     assert_receive 0
 
@@ -78,9 +78,9 @@ defmodule ContextEXTest do
   end
 
   test "group activation" do
-    p1 = Caller.start(:groupA)
-    p2 = Caller.start(:groupA)
-    p3 = Caller.start(:groupB)
+    p1 = TestMod.start(:groupA)
+    p2 = TestMod.start(:groupA)
+    p3 = TestMod.start(:groupB)
 
     cast_activate_group(:groupA, %{:categoryA => :layer1})
     assert get_activelayers(p1) == %{:categoryA => :layer1}
@@ -132,5 +132,15 @@ defmodule ContextEXTest do
 
     send pid, %MyStruct{name: :n, value: :val}
     assert_receive {:n, :val}
+  end
+
+  test "Unregister" do
+    pid = TestMod.start()
+    context = %{:status => :normal}
+    call_activate_layer(pid, context)
+    assert context == get_activelayers(pid)
+    send pid, {:end, self}
+    Process.sleep 10
+    assert nil == get_activelayers(pid)
   end
 end

@@ -45,12 +45,12 @@ defmodule ContextEX do
   @doc """
   Register process(self) in nodeLevel contextServer.
   """
-  defmacro init_context(arg \\ nil) do
+  defmacro init_context(group \\ nil) do
     quote do
       with  self_pid = self,
         top_agent_pid = :global.whereis_name(unquote(@top_agent_name)),
         node_agent_name = String.to_atom(unquote(@node_agent_prefix) <> Atom.to_string(node)),
-        group = if(unquote(arg) == nil, do: nil, else: unquote(arg))
+        group = (if (unquote(group) == nil), do: nil, else: unquote(group))
       do
         node_agent_pid =
           case Process.whereis(node_agent_name) do
@@ -69,9 +69,24 @@ defmodule ContextEX do
         Agent.update(node_agent_pid, fn(state) ->
           [{group, self_pid, %{}} | state]
         end)
+
         # register nodeLevel agent's pid in globalLevel agent
         Agent.update(top_agent_pid, fn(state) ->
           [node_agent_pid | state]
+        end)
+
+        # unregister when process is down
+        spawn(fn ->
+          Process.monitor(self_pid)
+          receive do
+            msg ->
+              Agent.update(node_agent_pid, fn(state) ->
+                Enum.filter(state, fn(x) ->
+                  {_, pid, _} = x
+                  pid != self_pid
+                end)
+              end)
+          end
         end)
       end
     end
