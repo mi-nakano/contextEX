@@ -133,4 +133,14 @@ defmodule ContextEXTest do
     send pid, %MyStruct{name: :n, value: :val}
     assert_receive {:n, :val}
   end
+
+  test "Unregister" do
+    pid = Caller.start()
+    context = %{:status => :normal}
+    call_activate_layer(pid, context)
+    assert context == get_activelayers(pid)
+    send pid, {:end, self}
+    Process.sleep 10
+    assert nil == get_activelayers(pid)
+  end
 end
