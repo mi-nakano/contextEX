@@ -72,7 +72,8 @@ defmodule ContextEX do
 
         # register nodeLevel agent's pid in globalLevel agent
         Agent.update(top_agent_pid, fn(state) ->
-          [node_agent_pid | state] |> Enum.uniq
+          flag = Enum.any?(state, fn(x) -> x == node_agent_pid end)
+          if flag, do: state, else: [node_agent_pid | state]
         end)
 
         # unregister when process is down
