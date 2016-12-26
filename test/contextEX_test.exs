@@ -3,6 +3,8 @@ defmodule ContextEXTest do
   doctest ContextEX
   import ContextEX
 
+  @top_agent_name :ContextEXAgent
+
   defmodule TestMod do
     use ContextEX
     @context1 %{:categoryA => :layer1}
@@ -142,5 +144,20 @@ defmodule ContextEXTest do
     send pid, {:end, self}
     Process.sleep 10
     assert nil == get_activelayers(pid)
+  end
+
+  test "Remove registered process" do
+    pid = TestMod.start()
+    top_agent_pid = :global.whereis_name(@top_agent_name)
+    node_agents = Agent.get(top_agent_pid, &(&1))
+    Enum.each(node_agents, fn(agent) ->
+      val = Agent.get(agent, &(&1))
+      assert val != []
+    end)
+    remove_registered_process()
+    Enum.each(node_agents, fn(agent) ->
+      val = Agent.get(agent, &(&1))
+      assert val == []
+    end)
   end
 end

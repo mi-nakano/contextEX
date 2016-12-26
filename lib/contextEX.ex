@@ -93,6 +93,14 @@ defmodule ContextEX do
     end
   end
 
+  def remove_registered_process() do
+    top_agent_pid = :global.whereis_name(@top_agent_name)
+    node_agents = Agent.get(top_agent_pid, &(&1))
+    Enum.each(node_agents, fn(agent) ->
+      Agent.update(agent, fn(x) -> [] end)
+    end)
+  end
+
   @doc """
   return nil when pid isn't registered
   """
