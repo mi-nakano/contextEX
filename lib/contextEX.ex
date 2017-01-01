@@ -131,7 +131,7 @@ defmodule ContextEX do
       with  self_pid = unquote(pid),
         node_agent_pid = Process.whereis(String.to_atom(unquote(@node_agent_prefix) <> Atom.to_string(node))),
       do:
-        Agent.update(node_agent_pid, fn(state) ->
+        Agent.cast(node_agent_pid, fn(state) ->
           Enum.map(state, fn(x) ->
             case x do
               {group, ^self_pid, layers} ->
@@ -155,6 +155,23 @@ defmodule ContextEX do
   end
 
   defmacro cast_activate_group(target_group, map) do
+    quote bind_quoted: [top_agent_name: @top_agent_name, target_group: target_group, map: map] do
+      top_agent = :global.whereis_name top_agent_name
+      Agent.get(top_agent, fn(state) -> state end) |> Enum.each(fn(pid) ->
+        Agent.cast(pid, fn(state) ->
+          Enum.map(state, fn(row) ->
+            case row do
+              {^target_group, pid, layers} ->
+                {target_group, pid, Map.merge(layers, map)}
+              row -> row
+            end
+          end)
+        end)
+      end)
+    end
+  end
+
+  defmacro call_activate_group(target_group, map) do
     quote bind_quoted: [top_agent_name: @top_agent_name, target_group: target_group, map: map] do
       top_agent = :global.whereis_name top_agent_name
       Agent.get(top_agent, fn(state) -> state end) |> Enum.each(fn(pid) ->
