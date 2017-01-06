@@ -12,7 +12,7 @@ defmodule ContextEXTest do
     def start(groupName \\ nil) do
       pid = spawn(fn ->
         init_context(groupName)
-        routine
+        routine()
       end)
       Process.sleep 100
       pid
@@ -21,8 +21,8 @@ defmodule ContextEXTest do
     def routine() do
       receive do
         {:func, caller} ->
-          send caller, func
-          routine
+          send caller, func()
+          routine()
         {:end, caller} -> send caller, :end
       end
     end
@@ -62,20 +62,20 @@ defmodule ContextEXTest do
   end
 
   test "layered function" do
-    p = TestMod.start
-    send p, {:func, self}
+    p = TestMod.start()
+    send p, {:func, self()}
     assert_receive 0
 
     cast_activate_layer(p, %{:categoryA => :layer1})
-    send p, {:func, self}
+    send p, {:func, self()}
     assert_receive 1
 
     cast_activate_layer(p, %{:categoryB => :layer2})
-    send p, {:func, self}
+    send p, {:func, self()}
     assert_receive 2
 
     cast_activate_layer(p, %{:categoryB => :layer3})
-    send p, {:func, self}
+    send p, {:func, self()}
     assert_receive 3
   end
 
@@ -100,7 +100,7 @@ defmodule ContextEXTest do
 
     def start(pid) do
       spawn(fn ->
-        init_context
+        init_context()
         receive_ret(pid)
       end)
     end
@@ -119,7 +119,7 @@ defmodule ContextEXTest do
   end
 
   test "Match" do
-    pid = MatchTest.start(self)
+    pid = MatchTest.start(self())
     send pid, 1
     assert_receive 1
 
@@ -141,13 +141,13 @@ defmodule ContextEXTest do
     context = %{:status => :normal}
     call_activate_layer(pid, context)
     assert context == get_activelayers(pid)
-    send pid, {:end, self}
+    send pid, {:end, self()}
     Process.sleep 10
     assert nil == get_activelayers(pid)
   end
 
   test "Remove registered process" do
-    pid = TestMod.start()
+    TestMod.start()
     top_agent_pid = :global.whereis_name(@top_agent_name)
     node_agents = Agent.get(top_agent_pid, &(&1))
     Enum.each(node_agents, fn(agent) ->
