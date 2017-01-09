@@ -173,17 +173,27 @@ defmodule ContextEX do
   defmacro call_activate_group(target_group, map) do
     quote bind_quoted: [top_agent_name: @top_agent_name, target_group: target_group, map: map] do
       top_agent = :global.whereis_name top_agent_name
-      Agent.get(top_agent, fn(state) -> state end) |> Enum.each(fn(pid) ->
-        Agent.update(pid, fn(state) ->
-          Enum.map(state, fn(row) ->
-            case row do
-              {^target_group, pid, layers} ->
-                {target_group, pid, Map.merge(layers, map)}
-              row -> row
-            end
+      self_pid = self()
+      node_agents = Agent.get(top_agent, fn(state) -> state end)
+      Enum.each(node_agents, fn(pid) ->
+        spawn(fn ->
+          Agent.update(pid, fn(state) ->
+            Enum.map(state, fn(row) ->
+              case row do
+                {^target_group, pid, layers} ->
+                  {target_group, pid, Map.merge(layers, map)}
+                  row -> row
+              end
+            end)
           end)
+          send self_pid, :ok
         end)
       end)
+      for _ <- 1..Enum.count(node_agents) do
+        receive do
+          :ok -> :ok
+        end
+      end
     end
   end
 
