@@ -95,9 +95,18 @@ defmodule ContextEX do
   def remove_registered_process() do
     top_agent_pid = :global.whereis_name(@top_agent_name)
     node_agents = Agent.get(top_agent_pid, &(&1))
+    self_pid = self()
     Enum.each(node_agents, fn(agent) ->
-      Agent.update(agent, fn(_) -> [] end)
+      spawn(fn ->
+        Agent.update(agent, fn(_) -> [] end)
+        send self_pid, :ok
+      end)
     end)
+    for _ <- 1..Enum.count(node_agents) do
+      receive do
+        :ok -> :ok
+      end
+    end
   end
 
   @doc """
