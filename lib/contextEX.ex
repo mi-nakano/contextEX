@@ -1,7 +1,6 @@
 defmodule ContextEX do
   @top_agent_name :ContextEXAgent
   @node_agent_prefix "_node_agent_"
-  @none_group :none_group
 
   @partial_prefix "_partial_"
   @arg_name "arg"
@@ -13,10 +12,10 @@ defmodule ContextEX do
       @before_compile unquote(__MODULE__)
       Module.register_attribute __MODULE__, :layered_function, accumulate: true, persist: false
 
-      defp get_activelayers(), do: get_activelayers(self)
-      defp cast_activate_layer(map), do: cast_activate_layer(self, map)
-      defp call_activate_layer(map), do: call_activate_layer(self, map)
-      defp is_active?(layer), do: is_active?(self, layer)
+      defp get_activelayers(), do: get_activelayers(self())
+      defp cast_activate_layer(map), do: cast_activate_layer(self(), map)
+      defp call_activate_layer(map), do: call_activate_layer(self(), map)
+      defp is_active?(layer), do: is_active?(self(), layer)
     end
   end
 
@@ -43,13 +42,13 @@ defmodule ContextEX do
   end
 
   @doc """
-  Register process(self) in nodeLevel contextServer.
+  Register process(self()) in nodeLevel contextServer.
   """
   defmacro init_context(group \\ nil) do
     quote do
-      with  self_pid = self,
+      with  self_pid = self(),
         top_agent_pid = :global.whereis_name(unquote(@top_agent_name)),
-        node_agent_name = String.to_atom(unquote(@node_agent_prefix) <> Atom.to_string(node)),
+        node_agent_name = String.to_atom(unquote(@node_agent_prefix) <> Atom.to_string(node())),
         group = (if (unquote(group) == nil), do: nil, else: unquote(group))
       do
         node_agent_pid =
@@ -96,9 +95,18 @@ defmodule ContextEX do
   def remove_registered_process() do
     top_agent_pid = :global.whereis_name(@top_agent_name)
     node_agents = Agent.get(top_agent_pid, &(&1))
+    self_pid = self()
     Enum.each(node_agents, fn(agent) ->
-      Agent.update(agent, fn(x) -> [] end)
+      spawn(fn ->
+        Agent.update(agent, fn(_) -> [] end)
+        send self_pid, :ok
+      end)
     end)
+    for _ <- 1..Enum.count(node_agents) do
+      receive do
+        :ok -> :ok
+      end
+    end
   end
 
   @doc """
@@ -107,7 +115,7 @@ defmodule ContextEX do
   defmacro get_activelayers(pid) do
     quote do
       self_pid = unquote(pid)
-      node_agent_pid = Process.whereis String.to_atom(unquote(@node_agent_prefix) <> Atom.to_string(node))
+      node_agent_pid = Process.whereis String.to_atom(unquote(@node_agent_prefix) <> Atom.to_string(node()))
       res = Agent.get(node_agent_pid, fn(state) ->
         state |> Enum.find(fn(x) ->
           {_group, p, _layers} = x
@@ -129,7 +137,7 @@ defmodule ContextEX do
   defmacro cast_activate_layer(pid, map) do
     quote do
       with  self_pid = unquote(pid),
-        node_agent_pid = Process.whereis(String.to_atom(unquote(@node_agent_prefix) <> Atom.to_string(node))),
+        node_agent_pid = Process.whereis(String.to_atom(unquote(@node_agent_prefix) <> Atom.to_string(node()))),
       do:
         Agent.cast(node_agent_pid, fn(state) ->
           Enum.map(state, fn(x) ->
@@ -174,23 +182,33 @@ defmodule ContextEX do
   defmacro call_activate_group(target_group, map) do
     quote bind_quoted: [top_agent_name: @top_agent_name, target_group: target_group, map: map] do
       top_agent = :global.whereis_name top_agent_name
-      Agent.get(top_agent, fn(state) -> state end) |> Enum.each(fn(pid) ->
-        Agent.update(pid, fn(state) ->
-          Enum.map(state, fn(row) ->
-            case row do
-              {^target_group, pid, layers} ->
-                {target_group, pid, Map.merge(layers, map)}
-              row -> row
-            end
+      self_pid = self()
+      node_agents = Agent.get(top_agent, fn(state) -> state end)
+      Enum.each(node_agents, fn(pid) ->
+        spawn(fn ->
+          Agent.update(pid, fn(state) ->
+            Enum.map(state, fn(row) ->
+              case row do
+                {^target_group, pid, layers} ->
+                  {target_group, pid, Map.merge(layers, map)}
+                  row -> row
+              end
+            end)
           end)
+          send self_pid, :ok
         end)
       end)
+      for _ <- 1..Enum.count(node_agents) do
+        receive do
+          :ok -> :ok
+        end
+      end
     end
   end
 
   defmacro is_active?(pid, layer) do
     quote do
-      map = get_activelayers unquote(pid)
+      map = get_activelayers(unquote(pid))
       unquote(layer) in Map.values(map)
     end
   end
