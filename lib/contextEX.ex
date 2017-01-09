@@ -102,11 +102,11 @@ defmodule ContextEX do
         send self_pid, :ok
       end)
     end)
-    for _ <- 1..Enum.count(node_agents) do
+    Enum.each(node_agents, fn(_) ->
       receive do
         :ok -> :ok
       end
-    end
+    end)
   end
 
   @doc """
@@ -198,11 +198,11 @@ defmodule ContextEX do
           send self_pid, :ok
         end)
       end)
-      for _ <- 1..Enum.count(node_agents) do
+      Enum.each(node_agents, fn(_) ->
         receive do
           :ok -> :ok
         end
-      end
+      end)
     end
   end
 
